@@ -1,0 +1,21 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true
+    },
+    "authorizedDomains": [
+      "localhost",
+      "khm-handmade.vercel.app",
+      "khm-handmade.firebaseapp.com",
+      "khm-handmade.at",
+      "www.khm-handmade.at"
+    ]
+  }
+}
