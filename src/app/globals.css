@@ -1,19 +1,25 @@
 @import "tailwindcss";
 
 :root {
+  --linen: #faf8f4;
+  --linen-dark: #f0ebe3;
   --cream: #f5f0e8;
   --cream-dark: #e8e0d4;
-  --wood: #5c4033;
-  --wood-light: #7a5c44;
-  --wood-dark: #3d2914;
-  --forest: #2d5016;
-  --forest-light: #3d6b1f;
-  --moss: #6b8f4e;
-  --wheat: #c4a35a;
-  --bark: #8b6914;
+  --wood: #5c4a3d;
+  --wood-light: #7a6555;
+  --wood-dark: #2c2118;
+  --forest: #3d4f32;
+  --forest-light: #4d6340;
+  --moss: #7a8f6a;
+  --sage: #9caa8c;
+  --wheat: #b8956c;
+  --bark: #8b7355;
+  --stone: #8a8278;
 }
 
 @theme inline {
+  --color-linen: var(--linen);
+  --color-linen-dark: var(--linen-dark);
   --color-cream: var(--cream);
   --color-cream-dark: var(--cream-dark);
   --color-wood: var(--wood);
@@ -22,45 +28,105 @@
   --color-forest: var(--forest);
   --color-forest-light: var(--forest-light);
   --color-moss: var(--moss);
+  --color-sage: var(--sage);
   --color-wheat: var(--wheat);
   --color-bark: var(--bark);
-  --font-display: var(--font-playfair);
+  --color-stone: var(--stone);
+  --font-display: var(--font-cormorant);
   --font-body: var(--font-lora);
 }
 
 body {
-  background: var(--cream);
+  background: var(--linen);
   color: var(--wood-dark);
   font-family: var(--font-body), Georgia, serif;
 }
 
 .font-display {
-  font-family: var(--font-playfair), Georgia, serif;
+  font-family: var(--font-cormorant), Georgia, serif;
 }
 
-/* Wood texture overlay utility */
+/* Subtle paper grain */
 .wood-texture {
-  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
 }
 
-/* Hero gradient */
+/* Hero overlays */
 .hero-gradient {
   background: linear-gradient(
-    135deg,
-    var(--wood-dark) 0%,
-    var(--forest) 50%,
-    var(--wood) 100%
+    165deg,
+    rgba(44, 33, 24, 0.92) 0%,
+    rgba(61, 79, 50, 0.88) 45%,
+    rgba(44, 33, 24, 0.94) 100%
+  );
+}
+
+/* Elegant section label */
+.section-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--wheat);
+}
+
+/* Decorative line */
+.ornament-line {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ornament-line::before,
+.ornament-line::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(184, 149, 108, 0.4),
+    transparent
   );
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--cream-dark);
+  background: var(--linen-dark);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--wood);
-  border-radius: 4px;
+  background: var(--bark);
+  border-radius: 3px;
+}
+
+/* Smooth anchor scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 1s ease-out forwards;
+}
+
+.animate-fade-up-delay {
+  animation: fade-up 1s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.animate-fade-up-delay-2 {
+  animation: fade-up 1s ease-out 0.4s forwards;
+  opacity: 0;
 }
