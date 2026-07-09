@@ -92,36 +92,32 @@ function SideTabLink({ tab, pathname }: { tab: Tab; pathname: string }) {
   );
 }
 
-function StartTabButton({ tab, pathname }: { tab: Tab; pathname: string }) {
+function StartTabLink({ tab, pathname }: { tab: Tab; pathname: string }) {
   const Icon = tab.icon;
   const active = tab.isActive(pathname);
 
   return (
     <Link
       href={tab.href}
-      className="group absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[38%] touch-manipulation"
+      className={`relative group flex shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 px-3 py-2 min-h-[3.25rem] min-w-[4.25rem] touch-manipulation transition-all duration-200 ${
+        active
+          ? "border-wheat bg-forest text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+          : "border-wheat/85 bg-linen text-forest hover:bg-linen/90 group-active:scale-[0.98]"
+      }`}
       aria-current={active ? "page" : undefined}
       aria-label="Startbildschirm"
     >
       <span
-        className={`relative flex h-[3.65rem] w-[3.65rem] flex-col items-center justify-center gap-0.5 rounded-2xl border-2 shadow-[0_10px_28px_rgba(0,0,0,0.38)] transition-all duration-200 ${
+        className={`pointer-events-none absolute inset-0 rounded-xl ${
           active
-            ? "border-wheat bg-forest text-cream scale-105 shadow-[0_12px_32px_rgba(61,79,50,0.55)]"
-            : "border-wheat/85 bg-linen text-forest group-hover:scale-[1.03] group-active:scale-95"
+            ? "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.28),transparent_60%)]"
+            : "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.16),transparent_65%)]"
         }`}
-      >
-        <span
-          className={`pointer-events-none absolute inset-0 rounded-2xl ${
-            active
-              ? "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.35),transparent_55%)]"
-              : "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.22),transparent_60%)]"
-          }`}
-          aria-hidden
-        />
-        <Icon className="relative w-6 h-6" strokeWidth={active ? 2.25 : 2} />
-        <span className="relative text-[10px] font-semibold tracking-wide leading-none">
-          {tab.label}
-        </span>
+        aria-hidden
+      />
+      <Icon className="relative w-5 h-5" strokeWidth={active ? 2.25 : 2} />
+      <span className="relative text-[10px] font-semibold tracking-wide leading-none">
+        {tab.label}
       </span>
     </Link>
   );
@@ -193,14 +189,8 @@ export default function PwaBottomNav() {
       className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 lg:hidden"
       aria-label="Hauptnavigation"
     >
-      <div
-        className={`mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${
-          showStart ? "pt-7" : "pt-2"
-        }`}
-      >
-        <div className="relative rounded-2xl border border-white/10 bg-wood-dark/92 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)] p-1.5">
-          {showStart && <StartTabButton tab={startTab} pathname={pathname} />}
-
+      <div className="mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+        <div className="rounded-2xl border border-white/10 bg-wood-dark/92 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)] p-1.5">
           <div className="flex items-stretch gap-1">
             <div className="flex flex-1 gap-1 min-w-0">
               {leftTabs.map((tab) => (
@@ -208,7 +198,9 @@ export default function PwaBottomNav() {
               ))}
             </div>
 
-            {showStart && <div className="w-[4.25rem] shrink-0" aria-hidden />}
+            {showStart && (
+              <StartTabLink tab={startTab} pathname={pathname} />
+            )}
 
             <div className="flex flex-1 gap-1 min-w-0">
               {rightTabs.map((tab) => (
