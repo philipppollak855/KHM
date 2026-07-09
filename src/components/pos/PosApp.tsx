@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import PosDashboardLink from "@/components/pos/PosDashboardLink";
 import {
   ShoppingCart,
   User,
@@ -368,6 +369,7 @@ export default function PosApp() {
             >
               Neuer Verkauf
             </button>
+            <PosDashboardLink className="w-full border-linen/30 justify-center py-3.5" />
           </div>
         </div>
       </div>
@@ -378,10 +380,11 @@ export default function PosApp() {
     return (
       <div className="min-h-dvh flex flex-col bg-linen text-wood-dark">
         <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
-          <button onClick={() => setView("checkout")} className="p-2">
+          <button onClick={() => setView("checkout")} className="p-2" aria-label="Zurück">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="font-display text-xl font-light">Kartenzahlung (SumUp)</h1>
+          <h1 className="font-display text-xl font-light flex-1 min-w-0">Kartenzahlung (SumUp)</h1>
+          <PosDashboardLink compact />
         </header>
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <CreditCard className="w-16 h-16 text-forest mb-6" strokeWidth={1.5} />
@@ -412,10 +415,11 @@ export default function PosApp() {
     return (
       <div className="min-h-dvh flex flex-col bg-linen text-wood-dark">
         <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
-          <button onClick={() => setView("catalog")} className="p-2">
+          <button onClick={() => setView("catalog")} className="p-2" aria-label="Zurück">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="font-display text-xl font-light">Kasse</h1>
+          <h1 className="font-display text-xl font-light flex-1 min-w-0">Kasse</h1>
+          <PosDashboardLink compact />
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -552,20 +556,22 @@ export default function PosApp() {
     <div className="min-h-dvh flex flex-col">
       <header className="sticky top-0 z-30 bg-wood-dark/95 backdrop-blur border-b border-linen/10 px-4 py-3">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.2em] text-linen/50">KHM Kassa</p>
             <button
               onClick={() => setCustomerOpen(true)}
-              className="flex items-center gap-2 text-linen text-sm mt-0.5"
+              className="flex items-center gap-2 text-linen text-sm mt-0.5 max-w-full"
             >
-              <User className="w-4 h-4 text-wheat" />
-              <span className="truncate max-w-[140px]">{getPosCustomerLabel(customer)}</span>
+              <User className="w-4 h-4 text-wheat shrink-0" />
+              <span className="truncate">{getPosCustomerLabel(customer)}</span>
             </button>
           </div>
-          <button
-            onClick={() => setCartOpen(true)}
-            className="relative flex items-center gap-2 bg-forest px-4 py-2.5 text-linen text-sm font-medium"
-          >
+          <div className="flex items-center gap-2 shrink-0">
+            <PosDashboardLink compact />
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative flex items-center gap-2 bg-forest px-4 py-2.5 text-linen text-sm font-medium"
+            >
             <ShoppingCart className="w-4 h-4" />
             {formatPrice(totals.total)}
             {itemCount > 0 && (
@@ -574,6 +580,7 @@ export default function PosApp() {
               </span>
             )}
           </button>
+          </div>
         </div>
 
         <div className="relative">
