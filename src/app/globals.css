@@ -146,6 +146,19 @@ html {
     linear-gradient(165deg, #1a1410 0%, #12100d 40%, #0d0b09 100%);
 }
 
+.pwa-launcher[data-theme="light"] {
+  background: #f3ece2;
+  color: #2c2118;
+}
+
+.pwa-launcher[data-theme="light"] .pwa-launcher-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(61, 79, 50, 0.14), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 90% 15%, rgba(184, 149, 108, 0.18), transparent 50%),
+    radial-gradient(ellipse 70% 55% at 50% 110%, rgba(184, 149, 108, 0.12), transparent 60%),
+    linear-gradient(165deg, #faf6ef 0%, #f3ece2 42%, #ebe2d4 100%);
+}
+
 .pwa-launcher-bg::before,
 .pwa-launcher-bg::after {
   content: "";
@@ -171,6 +184,16 @@ html {
   top: 12%;
   background: rgba(184, 149, 108, 0.28);
   animation-delay: -5s;
+}
+
+.pwa-launcher[data-theme="light"] .pwa-launcher-bg::before {
+  background: rgba(61, 79, 50, 0.12);
+  opacity: 0.7;
+}
+
+.pwa-launcher[data-theme="light"] .pwa-launcher-bg::after {
+  background: rgba(184, 149, 108, 0.2);
+  opacity: 0.55;
 }
 
 @keyframes pwa-orb-float {
