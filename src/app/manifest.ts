@@ -12,10 +12,10 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "KHM",
     description:
       "Administration und Kassa für Kevin's Handmade Manufactur – Bestellungen, Rechnungen, Lager und POS.",
-    start_url: "/admin",
+    start_url: "/admin/start",
     scope: "/",
     display: "standalone",
-    orientation: "any",
+    orientation: "portrait-primary",
     background_color: "#2c2118",
     theme_color: "#3d4f32",
     lang: "de",
@@ -31,6 +31,12 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
     shortcuts: [
+      {
+        name: "Startbildschirm",
+        short_name: "Start",
+        url: "/admin/start",
+        icons: [icon],
+      },
       {
         name: "Dashboard",
         short_name: "Dashboard",

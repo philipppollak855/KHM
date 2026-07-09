@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import AdminShell from "@/components/admin/AdminShell";
 import PwaRootGuard from "@/components/pwa/PwaRootGuard";
+import PwaLauncherGate from "@/components/pwa/PwaLauncherGate";
 
 export default function AdminLayoutClient({
   children,
@@ -12,7 +13,9 @@ export default function AdminLayoutClient({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isAdmin, loading, logout } = useAuth();
+  const isLauncher = pathname === "/admin/start";
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {
@@ -25,6 +28,15 @@ export default function AdminLayoutClient({
       <div className="min-h-dvh flex items-center justify-center bg-wood-dark">
         <p className="text-cream/60">Laden...</p>
       </div>
+    );
+  }
+
+  if (isLauncher) {
+    return (
+      <>
+        <PwaRootGuard />
+        <PwaLauncherGate>{children}</PwaLauncherGate>
+      </>
     );
   }
 

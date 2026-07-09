@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { getLoginRedirect } from "@/lib/auth-redirect";
+import { isStandalonePwa } from "@/lib/pwa-history";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layout/PageHeader";
@@ -21,7 +22,9 @@ function LoginForm() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace(getLoginRedirect(user, explicitRedirect));
+      router.replace(
+        getLoginRedirect(user, explicitRedirect, { pwa: isStandalonePwa() })
+      );
     }
   }, [authLoading, user, explicitRedirect, router]);
 
@@ -31,7 +34,9 @@ function LoginForm() {
     setError("");
     try {
       const loggedInUser = await login(email, password);
-      router.push(getLoginRedirect(loggedInUser, explicitRedirect));
+      router.push(
+        getLoginRedirect(loggedInUser, explicitRedirect, { pwa: isStandalonePwa() })
+      );
     } catch {
       setError("Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Daten.");
     } finally {

@@ -22,6 +22,8 @@ import {
   type AdminNavGroup,
 } from "@/lib/admin-nav";
 import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
+import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import PwaBottomNav from "@/components/pwa/PwaBottomNav";
 
 function NavLinkItem({
   href,
@@ -295,6 +297,7 @@ export default function AdminShell({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const isPwa = useIsStandalonePwa();
 
   const currentPage = getCurrentNavPage(pathname);
 
@@ -337,29 +340,37 @@ export default function AdminShell({
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-cream-dark/30">
+    <div className={`min-h-dvh flex flex-col lg:flex-row bg-cream-dark/30 ${isPwa ? "pwa-admin-shell" : ""}`}>
       <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-wood-dark text-cream border-b border-cream/10">
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="p-2 -ml-2 rounded-lg hover:bg-cream/10"
-          aria-label="Menü öffnen"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-        <div className="flex-1 min-w-0">
+        {!isPwa && (
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="p-2 -ml-2 rounded-lg hover:bg-cream/10 touch-manipulation"
+            aria-label="Menü öffnen"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        )}
+        <div className={`flex-1 min-w-0 ${isPwa ? "text-center px-2" : ""}`}>
           <p className="font-display font-semibold truncate">
             {currentPage?.label || "KHM Admin"}
           </p>
-          <p className="text-[10px] text-cream/50 uppercase tracking-wider">Verwaltung</p>
+          <p className="text-[10px] text-cream/50 uppercase tracking-wider">
+            {isPwa ? "KHM Verwaltung" : "Verwaltung"}
+          </p>
         </div>
-        <Link
-          href="/pos"
-          className="p-2 rounded-lg bg-forest text-cream shrink-0"
-          aria-label="Kassa öffnen"
-        >
-          <Smartphone className="w-5 h-5" />
-        </Link>
+        {!isPwa ? (
+          <Link
+            href="/pos"
+            className="p-2 rounded-lg bg-forest text-cream shrink-0 touch-manipulation"
+            aria-label="Kassa öffnen"
+          >
+            <Smartphone className="w-5 h-5" />
+          </Link>
+        ) : (
+          <div className="w-10 shrink-0" aria-hidden />
+        )}
       </header>
 
       {mobileOpen && (
@@ -425,10 +436,16 @@ export default function AdminShell({
       </aside>
 
       <main className="flex-1 min-w-0 w-full overflow-x-hidden">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full min-w-0">
+        <div
+          className={`p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full min-w-0 ${
+            isPwa ? "pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:pb-8" : ""
+          }`}
+        >
           {children}
         </div>
       </main>
+
+      <PwaBottomNav onMenuOpen={() => setMobileOpen(true)} />
     </div>
   );
 }

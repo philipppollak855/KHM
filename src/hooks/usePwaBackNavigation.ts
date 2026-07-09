@@ -52,7 +52,7 @@ export function usePwaBackNavigation(handler: BackHandler, enabled = true) {
 
 export function usePwaRootGuard(pathname: string) {
   useEffect(() => {
-    const isAdminRoot = pathname === "/admin";
+    const isAdminRoot = pathname === "/admin" || pathname === "/admin/start";
     const isPosRoot = pathname === "/pos";
     if (!isAdminRoot && !isPosRoot) return;
     ensurePwaRootHistory();

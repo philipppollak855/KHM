@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import PwaRootGuard from "@/components/pwa/PwaRootGuard";
+import PwaBottomNav from "@/components/pwa/PwaBottomNav";
 
 export default function PosLayoutGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -26,7 +27,10 @@ export default function PosLayoutGuard({ children }: { children: React.ReactNode
   return (
     <>
       <PwaRootGuard />
-      <div className="min-h-dvh bg-wood-dark text-linen">{children}</div>
+      <div className="min-h-dvh bg-wood-dark text-linen pwa-pos-shell pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+        {children}
+      </div>
+      <PwaBottomNav />
     </>
   );
 }

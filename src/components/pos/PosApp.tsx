@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import PosDashboardLink from "@/components/pos/PosDashboardLink";
 import { usePosUrlNavigation } from "@/hooks/usePosUrlNavigation";
+import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import {
   ShoppingCart,
   User,
@@ -51,6 +52,7 @@ const walkInCustomer = (): PosCustomer => ({
 export default function PosApp() {
   const { view, cartOpen, customerOpen, setView, setCartOpen, setCustomerOpen } =
     usePosUrlNavigation();
+  const isPwa = useIsStandalonePwa();
   const prevViewRef = useRef(view);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -380,7 +382,9 @@ export default function PosApp() {
             >
               Neuer Verkauf
             </button>
-            <PosDashboardLink className="w-full border-linen/30 justify-center py-3.5" />
+            {!isPwa && (
+              <PosDashboardLink className="w-full border-linen/30 justify-center py-3.5" />
+            )}
           </div>
         </div>
       </div>
@@ -395,7 +399,7 @@ export default function PosApp() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="font-display text-xl font-light flex-1 min-w-0">Kartenzahlung (SumUp)</h1>
-          <PosDashboardLink compact />
+          {!isPwa && <PosDashboardLink compact />}
         </header>
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <CreditCard className="w-16 h-16 text-forest mb-6" strokeWidth={1.5} />
@@ -430,7 +434,7 @@ export default function PosApp() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="font-display text-xl font-light flex-1 min-w-0">Kasse</h1>
-          <PosDashboardLink compact />
+          {!isPwa && <PosDashboardLink compact />}
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -578,7 +582,7 @@ export default function PosApp() {
             </button>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <PosDashboardLink compact />
+            {!isPwa && <PosDashboardLink compact />}
             <button
               onClick={() => setCartOpen(true)}
               className="relative flex items-center gap-2 bg-forest px-4 py-2.5 text-linen text-sm font-medium"
