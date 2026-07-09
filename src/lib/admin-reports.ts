@@ -20,6 +20,29 @@ export interface OrderReport {
   onlineVolume: number;
 }
 
+export interface PosStaffReportRow {
+  staffId: string;
+  name: string;
+  orderCount: number;
+  volume: number;
+}
+
+export function computePosStaffReport(orders: Order[]): PosStaffReportRow[] {
+  const rows = new Map<string, PosStaffReportRow>();
+
+  for (const order of orders) {
+    if (!isPosOrder(order) || order.status === "cancelled") continue;
+    const staffId = order.createdByAdmin || "unknown";
+    const name = order.createdByAdminName?.trim() || "Unbekannt";
+    const current = rows.get(staffId) || { staffId, name, orderCount: 0, volume: 0 };
+    current.orderCount += 1;
+    current.volume += order.total;
+    rows.set(staffId, current);
+  }
+
+  return Array.from(rows.values()).sort((a, b) => b.volume - a.volume);
+}
+
 export function computeOrderReport(orders: Order[]): OrderReport {
   const active = orders.filter((o) => o.status !== "cancelled");
   const pos = active.filter(isPosOrder);

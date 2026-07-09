@@ -277,6 +277,48 @@ export async function createOrder(data: {
   return payload as { orderId: string; orderNumber: string; invoiceId: string };
 }
 
+export async function createGuestOrder(data: {
+  customerName: string;
+  customerEmail: string;
+  cartItems: CartItem[];
+  shipping: number;
+  shippingAddress: Address;
+  notes?: string;
+  distanceKm?: number;
+}) {
+  const stockCheck = await validateCartStock(
+    data.cartItems.map((i) => ({
+      productId: i.productId,
+      variantId: i.variantId,
+      name: i.variantName ? `${i.name} – ${i.variantName}` : i.name,
+      quantity: i.quantity,
+    }))
+  );
+  if (!stockCheck.ok) {
+    throw new Error(stockCheck.error);
+  }
+
+  const res = await fetch("/api/orders/guest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(payload.error || "Bestellung fehlgeschlagen.");
+  }
+
+  return payload as {
+    orderId: string;
+    orderNumber: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    total: number;
+  };
+}
+
 export async function updateOrderStatus(id: string, status: Order["status"]) {
   const order = await getOrder(id);
   if (!order) throw new Error("Bestellung nicht gefunden.");

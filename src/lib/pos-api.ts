@@ -94,6 +94,7 @@ export async function completePosSale(data: {
   paymentMethod: PaymentMethod;
   notes?: string;
   cardReference?: string;
+  sellerDisplayName?: string;
 }) {
   const headers = await authHeaders();
   const res = await fetch(apiUrl("/api/pos/orders"), {
@@ -108,6 +109,7 @@ export async function completePosSale(data: {
       paymentMethod: data.paymentMethod,
       notes: data.notes,
       cardReference: data.cardReference,
+      sellerDisplayName: data.sellerDisplayName,
     }),
     cache: "no-store",
   });

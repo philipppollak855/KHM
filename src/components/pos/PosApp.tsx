@@ -3,8 +3,11 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import PosDashboardLink from "@/components/pos/PosDashboardLink";
+import PosQrPayment from "@/components/pos/PosQrPayment";
 import { usePosUrlNavigation } from "@/hooks/usePosUrlNavigation";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import { useAuth } from "@/context/AuthContext";
+import { useCompanyBranding } from "@/context/CompanyBrandingContext";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 import {
   ShoppingCart,
@@ -21,9 +24,11 @@ import {
   ArrowLeft,
   Package,
   Landmark,
+  QrCode,
 } from "lucide-react";
 import { getActiveCategories, getActiveProducts, formatPrice } from "@/lib/firestore";
 import { calculateOrderTotals } from "@/lib/pricing";
+import { buildPosTransferReference } from "@/lib/payments/epc-qr";
 import { printInvoicePdf } from "@/lib/documents/download";
 import {
   searchPosCustomers,
@@ -40,8 +45,6 @@ import {
   getProductListStock,
   productHasVariants,
 } from "@/lib/product-variants";
-
-type View = "catalog" | "checkout" | "card_pending" | "success";
 
 function getPosCustomerLabel(customer: PosCustomer) {
   if (customer.name?.trim()) return customer.name.trim();
@@ -60,6 +63,9 @@ export default function PosApp() {
   const { view, cartOpen, customerOpen, setView, setCartOpen, setCustomerOpen } =
     usePosUrlNavigation();
   const isPwa = useIsStandalonePwa();
+  const { user } = useAuth();
+  const { company } = useCompanyBranding();
+  const sellerName = user?.displayName?.trim() || user?.email || "Team";
   const prevViewRef = useRef(view);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -94,6 +100,7 @@ export default function PosApp() {
     paymentMethod: PaymentMethod;
   } | null>(null);
   const [cardReference, setCardReference] = useState("");
+  const [qrTransferReference, setQrTransferReference] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
   const [printStatus, setPrintStatus] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -314,6 +321,7 @@ export default function PosApp() {
       cartItems,
       paymentMethod: method,
       cardReference: reference,
+      sellerDisplayName: sellerName,
     });
     setSaleResult(result);
     setCustomer(saleCustomer);
@@ -332,10 +340,32 @@ export default function PosApp() {
       setView("card_pending");
       return;
     }
+    if (paymentMethod === "qr_transfer") {
+      if (!company.iban?.trim()) {
+        setError("IBAN in den Einstellungen fehlt – QR-Zahlung nicht möglich.");
+        return;
+      }
+      setQrTransferReference(buildPosTransferReference());
+      setView("qr_pending");
+      return;
+    }
     setProcessing(true);
     setError("");
     try {
       await finalizeSale(paymentMethod);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verkauf fehlgeschlagen");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleQrConfirm = async () => {
+    setProcessing(true);
+    setError("");
+    try {
+      await finalizeSale("qr_transfer", qrTransferReference);
+      setQrTransferReference("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verkauf fehlgeschlagen");
     } finally {
@@ -386,6 +416,7 @@ export default function PosApp() {
     setPaymentMethod("cash");
     setLinkToAccount(false);
     setCardReference("");
+    setQrTransferReference("");
     setEmailStatus("");
     setPrintStatus("");
     setTempPassword(null);
@@ -468,9 +499,10 @@ export default function PosApp() {
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <CreditCard className="w-16 h-16 text-forest mb-6" strokeWidth={1.5} />
           <p className="text-3xl font-display text-forest mb-2">{formatPrice(totals.total)}</p>
-          <p className="text-stone mb-8 max-w-sm">
-            Bitte den Betrag am SumUp-Terminal durchführen. Danach Zahlung bestätigen und Beleg drucken.
+          <p className="text-stone mb-2 max-w-sm">
+            Bitte den Betrag am SumUp-Terminal durchführen. Danach Zahlung bestätigen.
           </p>
+          <p className="text-xs text-stone/80 mb-8">Verkäufer: {sellerName}</p>
           <input
             placeholder="SumUp-Referenz (optional)"
             value={cardReference}
@@ -490,6 +522,45 @@ export default function PosApp() {
     );
   }
 
+  if (view === "qr_pending") {
+    return (
+      <div className="min-h-dvh flex flex-col pb-pwa-nav bg-linen text-wood-dark">
+        <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
+          <button onClick={() => setView("checkout")} className="p-2" aria-label="Zurück">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-xl font-light">QR-Überweisung</h1>
+            <p className="text-xs text-linen/60 truncate">Verkäufer: {sellerName}</p>
+          </div>
+          {!isPwa && <PosDashboardLink compact />}
+        </header>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col items-center">
+          <p className="text-center text-stone mb-6 max-w-md">
+            QR-Code dem Kunden zeigen. Die Banking-App füllt Betrag und Verwendungszweck automatisch aus.
+            Erst nach Zahlungseingang bestätigen.
+          </p>
+          <PosQrPayment
+            amount={totals.total}
+            beneficiaryName={company.name}
+            iban={company.iban}
+            bic={company.bic}
+            bankName={company.bankName}
+            reference={qrTransferReference}
+          />
+          {error && <p className="text-red-600 text-sm mt-4">{error}</p>}
+          <button
+            onClick={handleQrConfirm}
+            disabled={processing || !qrTransferReference}
+            className="w-full max-w-lg mt-6 py-4 bg-forest text-linen font-medium text-lg disabled:opacity-50"
+          >
+            {processing ? "Wird verbucht…" : "Zahlung eingegangen – Verkauf bestätigen"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (view === "checkout") {
     return (
       <div className="min-h-dvh flex flex-col pb-pwa-nav bg-linen text-wood-dark">
@@ -498,6 +569,7 @@ export default function PosApp() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="font-display text-xl font-light flex-1 min-w-0">Kasse</h1>
+          <p className="hidden sm:block text-xs text-linen/60 truncate max-w-[8rem]">{sellerName}</p>
           {!isPwa && <PosDashboardLink compact />}
         </header>
 
@@ -569,13 +641,15 @@ export default function PosApp() {
 
           <section>
             <p className="text-xs uppercase tracking-wider text-stone mb-3">Zahlungsart</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { id: "cash" as const, label: "Bar", icon: Banknote },
                 { id: "card" as const, label: "Karte", icon: CreditCard },
+                { id: "qr_transfer" as const, label: "QR-Code", icon: QrCode },
                 { id: "bank_transfer" as const, label: "Überweisung", icon: Landmark },
               ].map(({ id, label, icon: Icon }) => {
-                const disabled = id === "bank_transfer" && !canUseBankTransfer && !linkToAccount;
+                const disabled =
+                  id === "bank_transfer" && !canUseBankTransfer && !linkToAccount;
                 return (
                   <button
                     key={id}
@@ -597,6 +671,11 @@ export default function PosApp() {
             {paymentMethod === "bank_transfer" && (
               <p className="text-xs text-stone mt-2">
                 Rechnung wird dem Kundenkonto gutgeschrieben. Zahlung manuell bestätigen.
+              </p>
+            )}
+            {paymentMethod === "qr_transfer" && (
+              <p className="text-xs text-stone mt-2">
+                SEPA-QR auf dem Display – Kunde überweist per App, Verkäufer bestätigt den Eingang.
               </p>
             )}
           </section>
@@ -651,6 +730,7 @@ export default function PosApp() {
               <User className="w-4 h-4 text-wheat shrink-0" />
               <span className="truncate">{getPosCustomerLabel(customer)}</span>
             </button>
+            <p className="text-[10px] text-linen/45 truncate mt-0.5">Verkäufer: {sellerName}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">

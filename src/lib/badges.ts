@@ -1,4 +1,5 @@
 import type { Invoice, Order, PaymentMethod, User } from "@/lib/types";
+import { isGuestUserId } from "@/lib/guest-order";
 
 export type BadgeTone =
   | "neutral"
@@ -20,6 +21,7 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   cash: "Bar",
   card: "Karte",
   bank_transfer: "Überweisung",
+  qr_transfer: "QR-Überweisung",
 };
 
 const ORDER_STATUS_LABELS: Record<Order["status"], string> = {
@@ -59,6 +61,15 @@ export function getOrderBadges(order: Order, invoice?: Invoice | null): BadgeIte
     title: channel === "pos" ? "Verkauf über Kassa" : "Online-Bestellung",
   });
 
+  if (order.isGuest || isGuestUserId(order.userId)) {
+    badges.push({
+      key: "guest",
+      label: "Gast",
+      tone: "info",
+      title: "Gastbestellung ohne Kundenkonto",
+    });
+  }
+
   if (order.paymentMethod) {
     badges.push({
       key: "payment",
@@ -93,7 +104,11 @@ export function getOrderBadges(order: Order, invoice?: Invoice | null): BadgeIte
         tone: "neutral",
       });
     }
-  } else if (order.paymentMethod === "cash" || order.paymentMethod === "card") {
+  } else if (
+    order.paymentMethod === "cash" ||
+    order.paymentMethod === "card" ||
+    order.paymentMethod === "qr_transfer"
+  ) {
     badges.push({
       key: "paid-implicit",
       label: "Bezahlt",

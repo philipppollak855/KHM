@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
 
     const result = await createPosOrder({
       adminUserId: auth.uid,
+      adminDisplayName:
+        typeof body.sellerDisplayName === "string" ? body.sellerDisplayName : undefined,
       customerUserId,
       customerName,
       customerEmail: body.customerEmail ? String(body.customerEmail) : undefined,

@@ -109,6 +109,9 @@ export default function OrderDetailPanel({
                 {order.paymentMethod
                   ? ` · ${PAYMENT_METHOD_LABELS[order.paymentMethod]}`
                   : ""}
+                {order.createdByAdminName
+                  ? ` · Verkäufer: ${order.createdByAdminName}`
+                  : ""}
               </p>
               <OrderBadges order={order} invoice={invoice} className="mt-3" />
             </div>

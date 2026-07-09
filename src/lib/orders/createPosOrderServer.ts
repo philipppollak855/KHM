@@ -22,8 +22,15 @@ const DEFAULT_POS_ADDRESS: Address = {
   country: "Österreich",
 };
 
+async function getStaffDisplayName(adminUserId: string): Promise<string> {
+  const snap = await getAdminFirestore().collection("users").doc(adminUserId).get();
+  const name = snap.data()?.displayName;
+  return typeof name === "string" && name.trim() ? name.trim() : "Team";
+}
+
 export async function createPosOrder(data: {
   adminUserId: string;
+  adminDisplayName?: string;
   customerUserId?: string | null;
   customerName: string;
   customerEmail?: string;
@@ -40,7 +47,7 @@ export async function createPosOrder(data: {
     throw new Error("Überweisung ist nur mit Kundenkonto möglich.");
   }
 
-  const validMethods: PaymentMethod[] = ["cash", "card", "bank_transfer"];
+  const validMethods: PaymentMethod[] = ["cash", "card", "bank_transfer", "qr_transfer"];
   if (!validMethods.includes(data.paymentMethod)) {
     throw new Error("Ungültige Zahlungsart.");
   }
@@ -56,6 +63,8 @@ export async function createPosOrder(data: {
   const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const paidNow = isImmediatePayment(data.paymentMethod);
+  const staffName =
+    data.adminDisplayName?.trim() || (await getStaffDisplayName(data.adminUserId));
 
   const shippingAddress: Address = {
     street: data.address?.street || DEFAULT_POS_ADDRESS.street,
@@ -102,6 +111,7 @@ export async function createPosOrder(data: {
       channel: "pos",
       paymentMethod: data.paymentMethod,
       createdByAdmin: data.adminUserId,
+      createdByAdminName: staffName,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -146,7 +156,9 @@ export async function createPosOrder(data: {
       notes: paidNow
         ? data.paymentMethod === "card"
           ? "SumUp Kartenzahlung"
-          : "Barzahlung POS"
+          : data.paymentMethod === "qr_transfer"
+            ? "QR-Überweisung POS"
+            : "Barzahlung POS"
         : "Überweisung – offen",
       confirmedBy: paidNow ? data.adminUserId : undefined,
     });

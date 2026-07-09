@@ -13,7 +13,7 @@ import { getOrderBadges } from "@/lib/badges";
 import { formatAdminCustomerName } from "@/lib/customer-display";
 import { ORDER_STATUS_LABELS } from "@/lib/customer-insights";
 import { isDateInRange, type PeriodPreset } from "@/lib/date-filters";
-import { computeOrderReport } from "@/lib/admin-reports";
+import { computeOrderReport, computePosStaffReport } from "@/lib/admin-reports";
 import AdminPeriodFilter, {
   getActiveDateRange,
   useDefaultCustomRange,
@@ -90,6 +90,7 @@ export default function AdminOrdersPage() {
           order.shippingAddress.city,
           order.shippingAddress.zip,
           order.shippingAddress.country,
+          order.createdByAdminName,
           ...order.items.map((i) => i.name),
           ...badges.map((b) => b.label),
         ]);
@@ -98,6 +99,10 @@ export default function AdminOrdersPage() {
   );
 
   const report = useMemo(() => computeOrderReport(filteredOrders), [filteredOrders]);
+  const staffReport = useMemo(
+    () => computePosStaffReport(filteredOrders),
+    [filteredOrders]
+  );
 
   const reportCards = [
     {
@@ -174,6 +179,25 @@ export default function AdminOrdersPage() {
 
       <AdminReportCards cards={reportCards} />
 
+      {staffReport.length > 0 && (channelFilter === "all" || channelFilter === "pos") && (
+        <section className="mb-6 rounded-xl border border-wood/10 bg-cream p-4">
+          <h2 className="text-sm font-semibold text-wood-dark mb-3">Kassa nach Verkäufer</h2>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {staffReport.map((row) => (
+              <div
+                key={row.staffId}
+                className="rounded-lg border border-wood/10 bg-linen/50 px-3 py-2.5"
+              >
+                <p className="font-medium text-wood-dark truncate">{row.name}</p>
+                <p className="text-sm text-stone mt-0.5">
+                  {row.orderCount} Verkäufe · {formatPrice(row.volume)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <AdminFilterChips
         value={statusFilter}
         onChange={setStatusFilter}
@@ -232,6 +256,12 @@ export default function AdminOrdersPage() {
                     {formatAdminCustomerName(order.customerName, order.userId)}
                     <span className="mx-1.5 text-wood/30">·</span>
                     {formatDate(order.createdAt)}
+                    {order.createdByAdminName && (
+                      <>
+                        <span className="mx-1.5 text-wood/30">·</span>
+                        {order.createdByAdminName}
+                      </>
+                    )}
                     <span className="mx-1.5 text-wood/30 hidden sm:inline">·</span>
                     <span className="hidden sm:inline">{itemSummary}</span>
                   </p>

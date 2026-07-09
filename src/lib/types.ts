@@ -109,7 +109,7 @@ export type OrderStatus =
   | "cancelled";
 
 export type OrderChannel = "online" | "pos";
-export type PaymentMethod = "cash" | "card" | "bank_transfer";
+export type PaymentMethod = "cash" | "card" | "bank_transfer" | "qr_transfer";
 export type PaymentStatus = "pending" | "completed" | "failed" | "cancelled";
 export type PaymentSource = "automatic" | "manual";
 
@@ -154,7 +154,9 @@ export interface Order {
   stockRestocked?: boolean;
   channel?: OrderChannel;
   paymentMethod?: PaymentMethod;
+  isGuest?: boolean;
   createdByAdmin?: string;
+  createdByAdminName?: string;
   createdAt: Date;
   updatedAt: Date;
 }

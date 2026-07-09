@@ -3,11 +3,12 @@
 import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export type PosView = "catalog" | "checkout" | "card_pending" | "success";
+export type PosView = "catalog" | "checkout" | "card_pending" | "qr_pending" | "success";
 
 function parseView(step: string | null): PosView {
   if (step === "checkout") return "checkout";
   if (step === "card") return "card_pending";
+  if (step === "qr") return "qr_pending";
   if (step === "success") return "success";
   return "catalog";
 }
@@ -15,6 +16,7 @@ function parseView(step: string | null): PosView {
 function viewToStep(view: PosView): string | null {
   if (view === "catalog") return null;
   if (view === "card_pending") return "card";
+  if (view === "qr_pending") return "qr";
   return view;
 }
 

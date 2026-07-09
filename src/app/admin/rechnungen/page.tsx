@@ -15,6 +15,7 @@ import { getInvoiceBadges } from "@/lib/badges";
 import { matchesSearch } from "@/lib/search";
 import { isDateInRange, type PeriodPreset } from "@/lib/date-filters";
 import { computeInvoiceReport } from "@/lib/admin-reports";
+import { PAYMENT_METHOD_LABELS } from "@/lib/customer-insights";
 import AdminPeriodFilter, {
   getActiveDateRange,
   useDefaultCustomRange,
@@ -30,12 +31,6 @@ const statusLabels: Record<Invoice["status"], string> = {
   sent: "Offen",
   paid: "Bezahlt",
   cancelled: "Storniert",
-};
-
-const paymentMethodLabels: Record<PaymentMethod, string> = {
-  cash: "Bar",
-  card: "Karte",
-  bank_transfer: "Überweisung",
 };
 
 function InvoiceStatusBadge({ inv }: { inv: Invoice }) {
@@ -346,7 +341,7 @@ function AdminInvoicesPageContent() {
                       · Fällig {formatDate(inv.dueAt)}
                     </span>
                     {inv.paymentMethod && (
-                      <span>· {paymentMethodLabels[inv.paymentMethod]}</span>
+                      <span>· {PAYMENT_METHOD_LABELS[inv.paymentMethod]}</span>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -396,7 +391,7 @@ function AdminInvoicesPageContent() {
                         </td>
                         <td className="p-4 font-medium">{formatPrice(inv.total)}</td>
                         <td className="p-4 text-stone">
-                          {inv.paymentMethod ? paymentMethodLabels[inv.paymentMethod] : "–"}
+                          {inv.paymentMethod ? PAYMENT_METHOD_LABELS[inv.paymentMethod] : "–"}
                         </td>
                         <td className="p-4">
                           <InvoiceStatusBadge inv={inv} />

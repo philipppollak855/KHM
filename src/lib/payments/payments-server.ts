@@ -3,7 +3,7 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 import type { PaymentMethod, PaymentSource, PaymentStatus } from "@/lib/types";
 
 export function isImmediatePayment(method: PaymentMethod): boolean {
-  return method === "cash" || method === "card";
+  return method === "cash" || method === "card" || method === "qr_transfer";
 }
 
 export async function createPaymentRecord(

@@ -21,6 +21,7 @@ export async function createOrderWithStockDeduction(data: {
   shippingAddress: Address;
   notes?: string;
   distanceKm?: number;
+  isGuest?: boolean;
 }) {
   const db = getAdminFirestore();
   const orderRef = db.collection("orders").doc();
@@ -28,9 +29,11 @@ export async function createOrderWithStockDeduction(data: {
   const paymentRef = db.collection("payments").doc();
   const orderNumber = uniqueId("KHM");
   const invoiceNumber = uniqueId("RE");
+  const userId = data.isGuest ? `guest-${orderRef.id}` : data.userId;
 
   let resultOrderId = "";
   let resultInvoiceId = "";
+  let resultTotal = 0;
 
   await db.runTransaction(async (tx) => {
     const cartItems = await resolveCartItemsServer(tx, db, data.cartItems);
@@ -40,9 +43,10 @@ export async function createOrderWithStockDeduction(data: {
     const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
     const taxBreakdown = aggregateTaxBreakdown(items);
     const total = roundCurrency(subtotalGross + data.shipping);
+    resultTotal = total;
 
     tx.set(orderRef, {
-      userId: data.userId,
+      userId,
       customerName: data.customerName,
       customerEmail: data.customerEmail,
       items,
@@ -60,6 +64,7 @@ export async function createOrderWithStockDeduction(data: {
       invoiceId: invoiceRef.id,
       channel: "online",
       paymentMethod: "bank_transfer",
+      isGuest: data.isGuest === true,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -68,7 +73,7 @@ export async function createOrderWithStockDeduction(data: {
       invoiceNumber,
       orderId: orderRef.id,
       orderNumber,
-      userId: data.userId,
+      userId,
       customerName: data.customerName,
       customerEmail: data.customerEmail,
       items,
@@ -92,14 +97,16 @@ export async function createOrderWithStockDeduction(data: {
       orderId: orderRef.id,
       orderNumber,
       invoiceNumber,
-      userId: data.userId,
+      userId,
       customerName: data.customerName,
       customerEmail: data.customerEmail,
       amount: total,
       method: "bank_transfer",
       status: "pending",
       source: "automatic",
-      notes: "Online-Bestellung – Überweisung offen",
+      notes: data.isGuest
+        ? "Gastbestellung – Überweisung offen"
+        : "Online-Bestellung – Überweisung offen",
     });
 
     await deductStockInTransaction(
@@ -114,7 +121,7 @@ export async function createOrderWithStockDeduction(data: {
       {
         orderId: orderRef.id,
         orderNumber,
-        userId: data.userId,
+        userId,
       }
     );
 
@@ -126,5 +133,7 @@ export async function createOrderWithStockDeduction(data: {
     orderId: resultOrderId,
     orderNumber,
     invoiceId: resultInvoiceId,
+    invoiceNumber,
+    total: resultTotal,
   };
 }
