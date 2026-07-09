@@ -530,7 +530,7 @@ export default function PosApp() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-xl font-light">QR-Überweisung</h1>
+            <h1 className="font-display text-xl font-light">QR-Code</h1>
             <p className="text-xs text-linen/60 truncate">Verkäufer: {sellerName}</p>
           </div>
           {!isPwa && <PosDashboardLink compact />}

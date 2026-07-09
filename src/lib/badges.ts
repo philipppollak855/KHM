@@ -21,7 +21,7 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   cash: "Bar",
   card: "Karte",
   bank_transfer: "Überweisung",
-  qr_transfer: "QR-Überweisung",
+  qr_transfer: "QR-Code",
 };
 
 const ORDER_STATUS_LABELS: Record<Order["status"], string> = {
@@ -74,7 +74,10 @@ export function getOrderBadges(order: Order, invoice?: Invoice | null): BadgeIte
     badges.push({
       key: "payment",
       label: PAYMENT_LABELS[order.paymentMethod],
-      tone: order.paymentMethod === "bank_transfer" ? "warning" : "neutral",
+      tone:
+        order.paymentMethod === "bank_transfer" || order.paymentMethod === "qr_transfer"
+          ? "warning"
+          : "neutral",
       title: "Zahlungsart",
     });
   }
@@ -107,7 +110,7 @@ export function getOrderBadges(order: Order, invoice?: Invoice | null): BadgeIte
   } else if (
     order.paymentMethod === "cash" ||
     order.paymentMethod === "card" ||
-    order.paymentMethod === "qr_transfer"
+    (order.paymentMethod === "qr_transfer" && channel === "pos")
   ) {
     badges.push({
       key: "paid-implicit",

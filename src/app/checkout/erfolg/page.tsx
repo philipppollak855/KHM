@@ -43,9 +43,9 @@ export default function GuestCheckoutSuccessPage() {
       <div className="text-center mb-8">
         <CheckCircle2 className="w-14 h-14 text-forest mx-auto mb-4" strokeWidth={1.5} />
         <PageHeader
-          label="Gastbestellung"
+          label={order.paymentMethod === "qr_transfer" ? "Zahlung" : "Gastbestellung"}
           title="Vielen Dank!"
-          description={`Bestellung ${order.orderNumber} wurde aufgenommen. Bitte überweisen Sie den Betrag – danach bearbeiten wir Ihre Bestellung.`}
+          description={`Bestellung ${order.orderNumber} wurde aufgenommen. Bitte bezahlen Sie per QR-Code – danach bearbeiten wir Ihre Bestellung.`}
         />
       </div>
 

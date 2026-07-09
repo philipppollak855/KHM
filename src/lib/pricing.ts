@@ -38,7 +38,7 @@ export function buildOrderItem(
   const netAmount = roundCurrency(grossAmount - taxAmount);
   return {
     productId,
-    variantId,
+    ...(variantId ? { variantId } : {}),
     name,
     price: grossUnitPrice,
     quantity,

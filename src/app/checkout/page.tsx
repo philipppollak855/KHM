@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { QrCode, Landmark } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { createOrder, createGuestOrder, formatPrice } from "@/lib/firestore";
 import { useOrderCalculation } from "@/hooks/useOrderCalculation";
 import { COUNTRIES } from "@/lib/shipping";
 import { saveGuestOrderConfirmation } from "@/lib/guest-order";
+import type { PaymentMethod } from "@/lib/types";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
@@ -21,6 +23,8 @@ export default function CheckoutPage() {
   const { items, clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("qr_transfer");
 
   const [form, setForm] = useState({
     name: "",
@@ -43,6 +47,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (user) {
+      setPaymentMethod("bank_transfer");
       setForm((f) => ({
         ...f,
         name: user.displayName || f.name,
@@ -91,8 +96,21 @@ export default function CheckoutPage() {
           shippingAddress,
           notes: form.notes || undefined,
           distanceKm: distanceKm || undefined,
+          paymentMethod,
         });
         clearCart();
+        if (paymentMethod === "qr_transfer") {
+          saveGuestOrderConfirmation({
+            orderNumber: result.orderNumber,
+            invoiceNumber: result.invoiceNumber,
+            total: result.total,
+            email: user.email,
+            customerName: form.name,
+            paymentMethod: "qr_transfer",
+          });
+          router.push("/checkout/erfolg");
+          return;
+        }
         router.push(
           `/konto/bestellungen?success=1&orderId=${result.orderId}&orderNumber=${result.orderNumber}`
         );
@@ -107,6 +125,7 @@ export default function CheckoutPage() {
         shippingAddress,
         notes: form.notes || undefined,
         distanceKm: distanceKm || undefined,
+        paymentMethod: "qr_transfer",
       });
 
       saveGuestOrderConfirmation({
@@ -115,6 +134,7 @@ export default function CheckoutPage() {
         total: result.total,
         email: form.email.trim(),
         customerName: form.name,
+        paymentMethod: "qr_transfer",
       });
       clearCart();
       router.push("/checkout/erfolg");
@@ -136,8 +156,8 @@ export default function CheckoutPage() {
         title="Kasse"
         description={
           user
-            ? "Zahlung per Überweisung – Bestätigung nach Zahlungseingang."
-            : "Als Gast bestellen – Zahlung ausschließlich per Überweisung."
+            ? "Wählen Sie Überweisung oder QR-Code zur Zahlung."
+            : "Als Gast bestellen – Zahlung per QR-Code."
         }
       />
 
@@ -226,12 +246,53 @@ export default function CheckoutPage() {
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
 
-          <div className="rounded-lg border border-forest/20 bg-forest/5 px-4 py-3 text-sm text-wood-dark">
-            Zahlungsart: <strong>Überweisung</strong>
-            {!user && (
-              <span className="block text-stone mt-1 text-xs">
-                Als Gast ist nur die Zahlung per Überweisung möglich.
-              </span>
+          <div className="space-y-3">
+            <h2 className="font-display text-xl font-light text-wood-dark">
+              Zahlungsart
+            </h2>
+            {user ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(
+                  [
+                    { id: "bank_transfer" as const, label: "Überweisung", icon: Landmark },
+                    { id: "qr_transfer" as const, label: "QR-Code", icon: QrCode },
+                  ] as const
+                ).map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setPaymentMethod(id)}
+                    className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm transition-colors ${
+                      paymentMethod === id
+                        ? "border-forest bg-forest/5 text-wood-dark"
+                        : "border-wood/15 bg-white text-stone hover:border-wood/30"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 shrink-0 text-forest" strokeWidth={1.5} />
+                    <span className="font-medium">{label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-forest/20 bg-forest/5 px-4 py-3 text-sm text-wood-dark flex items-center gap-3">
+                <QrCode className="h-5 w-5 text-forest shrink-0" strokeWidth={1.5} />
+                <div>
+                  <strong>QR-Code</strong>
+                  <span className="block text-stone mt-0.5 text-xs">
+                    Nach der Bestellung erhalten Sie einen SEPA-QR zum einfachen Bezahlen.
+                  </span>
+                </div>
+              </div>
+            )}
+            {user && paymentMethod === "bank_transfer" && (
+              <p className="text-xs text-stone">
+                Rechnung per E-Mail – Zahlung per Überweisung mit Verwendungszweck.
+              </p>
+            )}
+            {paymentMethod === "qr_transfer" && user && (
+              <p className="text-xs text-stone">
+                Nach der Bestellung wird ein QR-Code mit Betrag und Verwendungszweck angezeigt.
+              </p>
             )}
           </div>
 

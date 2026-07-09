@@ -83,7 +83,7 @@ export async function downloadInvoicePdf(invoiceId: string) {
   ]);
   if (!invoice) throw new Error("Rechnung nicht gefunden");
   const logo = await fetchBrandingImageData(company.logoUrl);
-  generateInvoicePdf(invoice, company, logo);
+  await generateInvoicePdf(invoice, company, logo);
 }
 
 export async function printInvoicePdf(invoiceId: string) {
@@ -94,11 +94,11 @@ export async function printInvoicePdf(invoiceId: string) {
   if (!invoice) throw new Error("Rechnung nicht gefunden");
 
   const logo = await fetchBrandingImageData(company.logoUrl);
-  const blob = generateInvoicePdfBlob(invoice, company, { autoPrint: true, logo });
+  const blob = await generateInvoicePdfBlob(invoice, company, { autoPrint: true, logo });
   try {
     await printPdfBlob(blob, `Rechnung ${invoice.invoiceNumber}`);
   } catch {
-    generateInvoicePdf(invoice, company, logo);
+    await generateInvoicePdf(invoice, company, logo);
     throw new Error(
       "Druckdialog konnte nicht geöffnet werden. PDF wurde heruntergeladen – bitte dort drucken."
     );

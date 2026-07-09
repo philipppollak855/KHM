@@ -12,7 +12,7 @@ import { normalizePosCustomerName } from "@/lib/customer-display";
 import {
   createPaymentRecord,
   invoiceDueDate,
-  isImmediatePayment,
+  isPosImmediatePayment,
 } from "@/lib/payments/payments-server";
 
 const DEFAULT_POS_ADDRESS: Address = {
@@ -62,7 +62,7 @@ export async function createPosOrder(data: {
   const db = getAdminFirestore();
   const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  const paidNow = isImmediatePayment(data.paymentMethod);
+  const paidNow = isPosImmediatePayment(data.paymentMethod);
   const staffName =
     data.adminDisplayName?.trim() || (await getStaffDisplayName(data.adminUserId));
 
@@ -157,7 +157,7 @@ export async function createPosOrder(data: {
         ? data.paymentMethod === "card"
           ? "SumUp Kartenzahlung"
           : data.paymentMethod === "qr_transfer"
-            ? "QR-Überweisung POS"
+            ? "QR-Code POS"
             : "Barzahlung POS"
         : "Überweisung – offen",
       confirmedBy: paidNow ? data.adminUserId : undefined,

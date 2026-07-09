@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { buildOrderItemsFromCart, aggregateTaxBreakdown, roundCurrency } from "@/lib/pricing";
-import type { Address, CartItem } from "@/lib/types";
+import type { Address, CartItem, PaymentMethod } from "@/lib/types";
 import { createPaymentRecord, invoiceDueDate } from "@/lib/payments/payments-server";
 import { resolveCartItemsServer } from "./validateCartServer";
 import { deductStockInTransaction } from "./stock-server";
@@ -22,7 +22,18 @@ export async function createOrderWithStockDeduction(data: {
   notes?: string;
   distanceKm?: number;
   isGuest?: boolean;
+  paymentMethod?: PaymentMethod;
 }) {
+  const paymentMethod: PaymentMethod =
+    data.paymentMethod === "qr_transfer" ? "qr_transfer" : "bank_transfer";
+  const paymentNotes =
+    paymentMethod === "qr_transfer"
+      ? data.isGuest
+        ? "Gastbestellung – QR-Code offen"
+        : "Online-Bestellung – QR-Code offen"
+      : data.isGuest
+        ? "Gastbestellung – Überweisung offen"
+        : "Online-Bestellung – Überweisung offen";
   const db = getAdminFirestore();
   const orderRef = db.collection("orders").doc();
   const invoiceRef = db.collection("invoices").doc();
@@ -63,7 +74,7 @@ export async function createOrderWithStockDeduction(data: {
       stockDeducted: true,
       invoiceId: invoiceRef.id,
       channel: "online",
-      paymentMethod: "bank_transfer",
+      paymentMethod,
       isGuest: data.isGuest === true,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -84,7 +95,7 @@ export async function createOrderWithStockDeduction(data: {
       shipping: data.shipping,
       total,
       status: "sent",
-      paymentMethod: "bank_transfer",
+      paymentMethod,
       shippingAddress: data.shippingAddress,
       issuedAt: FieldValue.serverTimestamp(),
       dueAt: invoiceDueDate(14),
@@ -101,12 +112,10 @@ export async function createOrderWithStockDeduction(data: {
       customerName: data.customerName,
       customerEmail: data.customerEmail,
       amount: total,
-      method: "bank_transfer",
+      method: paymentMethod,
       status: "pending",
       source: "automatic",
-      notes: data.isGuest
-        ? "Gastbestellung – Überweisung offen"
-        : "Online-Bestellung – Überweisung offen",
+      notes: paymentNotes,
     });
 
     await deductStockInTransaction(

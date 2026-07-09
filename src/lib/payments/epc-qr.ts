@@ -41,3 +41,23 @@ export function formatIbanDisplay(iban: string): string {
     .replace(/(.{4})/g, "$1 ")
     .trim();
 }
+
+export async function generatePaymentQrDataUrl(params: {
+  beneficiaryName: string;
+  iban: string;
+  bic?: string;
+  amount: number;
+  remittanceText: string;
+}): Promise<string | null> {
+  try {
+    const QRCode = (await import("qrcode")).default;
+    const payload = buildEpcQrPayload(params);
+    return await QRCode.toDataURL(payload, {
+      width: 400,
+      margin: 1,
+      errorCorrectionLevel: "M",
+    });
+  } catch {
+    return null;
+  }
+}

@@ -5,6 +5,12 @@ import {
   createOrderWithStockDeduction,
   InsufficientStockError,
 } from "@/lib/orders/createOrderServer";
+import type { PaymentMethod } from "@/lib/types";
+
+function parseOnlinePaymentMethod(value: unknown): PaymentMethod {
+  if (value === "qr_transfer") return "qr_transfer";
+  return "bank_transfer";
+}
 
 export async function POST(req: NextRequest) {
   if (!hasAdminCredentials()) {
@@ -38,7 +44,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await createOrderWithStockDeduction(body);
+    const result = await createOrderWithStockDeduction({
+      ...body,
+      paymentMethod: parseOnlinePaymentMethod(body.paymentMethod),
+    });
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof InsufficientStockError) {

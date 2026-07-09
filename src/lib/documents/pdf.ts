@@ -4,6 +4,7 @@ import type { CompanySettings, Order, Invoice, DeliveryNote, OrderItem, TaxBreak
 import { formatPrice, formatDate } from "../firestore";
 import { resolveDocumentCustomerName, resolveDocumentSalutation } from "../customer-display";
 import type { BrandingImageData } from "../branding-image";
+import { generatePaymentQrDataUrl } from "../payments/epc-qr";
 
 const FOREST: [number, number, number] = [61, 79, 50];
 const WOOD: [number, number, number] = [44, 33, 24];
@@ -173,11 +174,11 @@ function downloadPdf(doc: jsPDF, filename: string) {
   doc.save(filename);
 }
 
-export function buildInvoicePdfDocument(
+export async function buildInvoicePdfDocument(
   invoice: Invoice,
   company: CompanySettings,
   logo?: BrandingImageData | null
-): jsPDF {
+): Promise<jsPDF> {
   const doc = new jsPDF();
   drawLetterhead(doc, company, "RECHNUNG", invoice.invoiceNumber, logo);
 
@@ -224,6 +225,35 @@ export function buildInvoicePdfDocument(
     finalY + 30
   );
 
+  const transferMethod =
+    invoice.paymentMethod === "qr_transfer" || invoice.paymentMethod === "bank_transfer";
+  const showQr = invoice.status === "sent" && company.iban?.trim() && transferMethod;
+
+  if (showQr) {
+    const qrDataUrl = await generatePaymentQrDataUrl({
+      beneficiaryName: company.name,
+      iban: company.iban,
+      bic: company.bic,
+      amount: invoice.total,
+      remittanceText: invoice.invoiceNumber,
+    });
+
+    if (qrDataUrl) {
+      const qrSize = 42;
+      const qrX = doc.internal.pageSize.getWidth() - 20 - qrSize;
+      const qrY = finalY + 8;
+      doc.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+      doc.setFontSize(7);
+      doc.setTextColor(...MUTED);
+      doc.text("Zahlung per QR-Code", qrX + qrSize / 2, qrY + qrSize + 5, {
+        align: "center",
+      });
+      doc.text(`Verwendungszweck: ${invoice.invoiceNumber}`, qrX + qrSize / 2, qrY + qrSize + 10, {
+        align: "center",
+      });
+    }
+  }
+
   drawFooter(doc, company);
   return doc;
 }
@@ -233,25 +263,25 @@ export async function invoicePdfToBuffer(
   company: CompanySettings,
   logo?: BrandingImageData | null
 ): Promise<Buffer> {
-  const doc = buildInvoicePdfDocument(invoice, company, logo);
+  const doc = await buildInvoicePdfDocument(invoice, company, logo);
   return Buffer.from(doc.output("arraybuffer"));
 }
 
-export function generateInvoicePdf(
+export async function generateInvoicePdf(
   invoice: Invoice,
   company: CompanySettings,
   logo?: BrandingImageData | null
 ) {
-  const doc = buildInvoicePdfDocument(invoice, company, logo);
+  const doc = await buildInvoicePdfDocument(invoice, company, logo);
   downloadPdf(doc, `Rechnung_${invoice.invoiceNumber}.pdf`);
 }
 
-export function generateInvoicePdfBlob(
+export async function generateInvoicePdfBlob(
   invoice: Invoice,
   company: CompanySettings,
   options?: { autoPrint?: boolean; logo?: BrandingImageData | null }
-): Blob {
-  const doc = buildInvoicePdfDocument(invoice, company, options?.logo);
+): Promise<Blob> {
+  const doc = await buildInvoicePdfDocument(invoice, company, options?.logo);
   if (options?.autoPrint) {
     doc.autoPrint({ variant: "non-conform" });
   }

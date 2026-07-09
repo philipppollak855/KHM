@@ -3,7 +3,16 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 import type { PaymentMethod, PaymentSource, PaymentStatus } from "@/lib/types";
 
 export function isImmediatePayment(method: PaymentMethod): boolean {
-  return method === "cash" || method === "card" || method === "qr_transfer";
+  return method === "cash" || method === "card";
+}
+
+/** POS: QR-Zahlung gilt nach Verkäufer-Bestätigung als sofort bezahlt. */
+export function isPosImmediatePayment(method: PaymentMethod): boolean {
+  return isImmediatePayment(method) || method === "qr_transfer";
+}
+
+export function isTransferPayment(method: PaymentMethod): boolean {
+  return method === "bank_transfer" || method === "qr_transfer";
 }
 
 export async function createPaymentRecord(

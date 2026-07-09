@@ -126,7 +126,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Bar",
   card: "Karte",
   bank_transfer: "Überweisung",
-  qr_transfer: "QR-Überweisung",
+  qr_transfer: "QR-Code",
 };
 
 export const INVOICE_STATUS_LABELS: Record<Invoice["status"], string> = {

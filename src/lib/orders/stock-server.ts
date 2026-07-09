@@ -107,7 +107,7 @@ export async function deductStockInTransaction(
 
       tx.set(db.collection("stockMovements").doc(), {
         productId: line.productId,
-        variantId: line.variantId,
+        variantId: line.variantId ?? null,
         productName: `${productName} – ${variant.name || "Variante"}`,
         delta: -line.quantity,
         stockAfter,
@@ -186,7 +186,7 @@ export async function restockInTransaction(
 
       tx.set(db.collection("stockMovements").doc(), {
         productId: line.productId,
-        variantId: line.variantId,
+        variantId: line.variantId ?? null,
         productName: `${productName} – ${variant.name || "Variante"}`,
         delta: line.quantity,
         stockAfter,

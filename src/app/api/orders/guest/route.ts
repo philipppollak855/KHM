@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
           ? Number(body.distanceKm)
           : undefined,
       isGuest: true,
+      paymentMethod: "qr_transfer",
     });
 
     return NextResponse.json(result);

@@ -6,6 +6,7 @@ export type GuestOrderConfirmation = {
   total: number;
   email: string;
   customerName: string;
+  paymentMethod?: "qr_transfer" | "bank_transfer";
 };
 
 export function saveGuestOrderConfirmation(data: GuestOrderConfirmation) {

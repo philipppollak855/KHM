@@ -34,7 +34,7 @@ import { DEFAULT_COMPANY } from "./company";
 import { DEFAULT_SHIPPING_ZONES } from "./shipping";
 import { validateCartStock, restockOrder } from "./inventory";
 import { auth } from "./firebase";
-import type { CartItem } from "./types";
+import type { CartItem, PaymentMethod } from "./types";
 import { parseVariantsFromFirestore } from "./product-variants";
 
 function toDate(value: unknown): Date {
@@ -241,6 +241,7 @@ export async function createOrder(data: {
   shippingAddress: Address;
   notes?: string;
   distanceKm?: number;
+  paymentMethod?: PaymentMethod;
 }) {
   const stockCheck = await validateCartStock(
     data.cartItems.map((i) => ({
@@ -274,7 +275,13 @@ export async function createOrder(data: {
     throw new Error(payload.error || "Bestellung fehlgeschlagen.");
   }
 
-  return payload as { orderId: string; orderNumber: string; invoiceId: string };
+  return payload as {
+    orderId: string;
+    orderNumber: string;
+    invoiceId: string;
+    invoiceNumber: string;
+    total: number;
+  };
 }
 
 export async function createGuestOrder(data: {
@@ -285,6 +292,7 @@ export async function createGuestOrder(data: {
   shippingAddress: Address;
   notes?: string;
   distanceKm?: number;
+  paymentMethod?: PaymentMethod;
 }) {
   const stockCheck = await validateCartStock(
     data.cartItems.map((i) => ({

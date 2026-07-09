@@ -49,10 +49,17 @@ export function getAdminAuth() {
   return getAuth(app);
 }
 
+let firestoreSettingsApplied = false;
+
 export function getAdminFirestore() {
   const app = getAdminApp();
   if (!app) throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY nicht konfiguriert.");
-  return getFirestore(app);
+  const db = getFirestore(app);
+  if (!firestoreSettingsApplied) {
+    db.settings({ ignoreUndefinedProperties: true });
+    firestoreSettingsApplied = true;
+  }
+  return db;
 }
 
 export function hasAdminCredentials(): boolean {
