@@ -79,7 +79,7 @@ function SideTabLink({ tab, pathname }: { tab: Tab; pathname: string }) {
   return (
     <Link
       href={tab.href}
-      className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2 min-h-[3.25rem] touch-manipulation transition-colors ${
+      className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2 h-[3.25rem] touch-manipulation transition-colors ${
         active
           ? "bg-forest text-cream"
           : "text-cream/55 hover:text-cream hover:bg-cream/5"
@@ -99,24 +99,16 @@ function StartTabLink({ tab, pathname }: { tab: Tab; pathname: string }) {
   return (
     <Link
       href={tab.href}
-      className={`relative group flex shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 px-3 py-2 min-h-[3.25rem] min-w-[4.25rem] touch-manipulation transition-all duration-200 ${
+      className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-xl py-2 h-[3.25rem] w-[4.25rem] touch-manipulation transition-colors ${
         active
-          ? "border-wheat bg-forest text-cream shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
-          : "border-wheat/85 bg-linen text-forest hover:bg-linen/90 group-active:scale-[0.98]"
+          ? "bg-forest text-cream ring-1 ring-inset ring-wheat/90"
+          : "bg-linen text-forest ring-1 ring-inset ring-wheat/75 hover:bg-linen/90"
       }`}
       aria-current={active ? "page" : undefined}
       aria-label="Startbildschirm"
     >
-      <span
-        className={`pointer-events-none absolute inset-0 rounded-xl ${
-          active
-            ? "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.28),transparent_60%)]"
-            : "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.16),transparent_65%)]"
-        }`}
-        aria-hidden
-      />
-      <Icon className="relative w-5 h-5" strokeWidth={active ? 2.25 : 2} />
-      <span className="relative text-[10px] font-semibold tracking-wide leading-none">
+      <Icon className="w-5 h-5" strokeWidth={active ? 2.25 : 2} />
+      <span className="text-[10px] font-semibold tracking-wide leading-none">
         {tab.label}
       </span>
     </Link>
@@ -190,8 +182,8 @@ export default function PwaBottomNav() {
       aria-label="Hauptnavigation"
     >
       <div className="mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="rounded-2xl border border-white/10 bg-wood-dark/92 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)] p-1.5">
-          <div className="flex items-stretch gap-1">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-wood-dark/92 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)] p-1.5">
+          <div className="flex items-center gap-1">
             <div className="flex flex-1 gap-1 min-w-0">
               {leftTabs.map((tab) => (
                 <SideTabLink key={tab.id} tab={tab} pathname={pathname} />
