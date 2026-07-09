@@ -35,13 +35,19 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "KHM Kassa",
+    statusBarStyle: "black-translucent",
+    title: "KHM Verwaltung",
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 
 export const viewport = {
   themeColor: "#3d4f32",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({

@@ -2,10 +2,19 @@ import {
   collection,
   getDocs,
   addDoc,
+  doc,
+  updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { slugify } from "./firestore";
+
+const SAMPLE_IMAGE =
+  "?w=600&q=80&auto=format&fit=crop" as const;
+
+function sampleImage(photoId: string) {
+  return `https://images.unsplash.com/${photoId}${SAMPLE_IMAGE}`;
+}
 
 const SAMPLE_CATEGORIES = [
   {
@@ -40,8 +49,7 @@ const SAMPLE_PRODUCTS = [
     price: 34.9,
     stock: 12,
     featured: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1610701596007-3a61ceadf344?w=600&q=80",
+    imageUrl: sampleImage("photo-1651589822716-2bb531112b8a"),
   },
   {
     categorySlug: "holzprodukte",
@@ -51,8 +59,7 @@ const SAMPLE_PRODUCTS = [
     price: 49.9,
     stock: 8,
     featured: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1594040226829-7f251ab46d80?w=600&q=80",
+    imageUrl: sampleImage("photo-1594040226829-7f251ab46d80"),
   },
   {
     categorySlug: "holzprodukte",
@@ -62,8 +69,7 @@ const SAMPLE_PRODUCTS = [
     price: 12.5,
     stock: 25,
     featured: false,
-    imageUrl:
-      "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=600&q=80",
+    imageUrl: sampleImage("photo-1627820751275-e44b937c5d33"),
   },
   {
     categorySlug: "textilien-filz",
@@ -73,8 +79,7 @@ const SAMPLE_PRODUCTS = [
     price: 38.0,
     stock: 15,
     featured: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1584100936595-c0654b8a4fb2?w=600&q=80",
+    imageUrl: sampleImage("photo-1586023492125-27b2c045efd7"),
   },
   {
     categorySlug: "textilien-filz",
@@ -84,8 +89,7 @@ const SAMPLE_PRODUCTS = [
     price: 22.0,
     stock: 20,
     featured: false,
-    imageUrl:
-      "https://images.unsplash.com/photo-1615529182904-1488c6e57c0e?w=600&q=80",
+    imageUrl: sampleImage("photo-1772110204270-8c88bb0f6251"),
   },
   {
     categorySlug: "textilien-filz",
@@ -95,8 +99,7 @@ const SAMPLE_PRODUCTS = [
     price: 89.0,
     stock: 6,
     featured: false,
-    imageUrl:
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
+    imageUrl: sampleImage("photo-1631049307264-da0ec9d70304"),
   },
   {
     categorySlug: "dekoration-geschenke",
@@ -106,8 +109,7 @@ const SAMPLE_PRODUCTS = [
     price: 45.0,
     stock: 10,
     featured: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1545048705-9613006ceb9c?w=600&q=80",
+    imageUrl: sampleImage("photo-1543589077-47d81606c1bf"),
   },
   {
     categorySlug: "dekoration-geschenke",
@@ -117,8 +119,7 @@ const SAMPLE_PRODUCTS = [
     price: 28.5,
     stock: 14,
     featured: false,
-    imageUrl:
-      "https://images.unsplash.com/photo-1602602898657-3e91760cbb34?w=600&q=80",
+    imageUrl: sampleImage("photo-1603006905003-be475563bc59"),
   },
   {
     categorySlug: "dekoration-geschenke",
@@ -128,8 +129,7 @@ const SAMPLE_PRODUCTS = [
     price: 39.9,
     stock: 18,
     featured: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=600&q=80",
+    imageUrl: sampleImage("photo-1544816155-12df9643f363"),
   },
 ];
 
@@ -178,4 +178,26 @@ export async function seedSampleData(): Promise<{
   }
 
   return { categories: SAMPLE_CATEGORIES.length, products: productCount };
+}
+
+export async function refreshSampleProductImages(): Promise<{ updated: number }> {
+  const sampleBySlug = new Map(
+    SAMPLE_PRODUCTS.map((product) => [slugify(product.name), product.imageUrl])
+  );
+
+  const productsSnap = await getDocs(collection(db, "products"));
+  let updated = 0;
+
+  for (const productDoc of productsSnap.docs) {
+    const slug = productDoc.data().slug as string | undefined;
+    if (!slug) continue;
+
+    const imageUrl = sampleBySlug.get(slug);
+    if (!imageUrl || productDoc.data().imageUrl === imageUrl) continue;
+
+    await updateDoc(doc(db, "products", productDoc.id), { imageUrl });
+    updated++;
+  }
+
+  return { updated };
 }

@@ -21,6 +21,7 @@ import {
   isNavLinkActive,
   type AdminNavGroup,
 } from "@/lib/admin-nav";
+import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
 
 function NavLinkItem({
   href,
@@ -296,6 +297,8 @@ export default function AdminShell({
   const [collapsed, setCollapsed] = useState(false);
 
   const currentPage = getCurrentNavPage(pathname);
+
+  usePwaOverlayBack(mobileOpen, "admin-menu", () => setMobileOpen(false));
 
   useEffect(() => {
     setMobileOpen(false);

@@ -14,6 +14,7 @@ import {
   Boxes,
   Sprout,
   Loader2,
+  ImageIcon,
 } from "lucide-react";
 import {
   getOrders,
@@ -24,7 +25,7 @@ import {
   formatPrice,
   formatDate,
 } from "@/lib/firestore";
-import { seedSampleData } from "@/lib/seed";
+import { seedSampleData, refreshSampleProductImages } from "@/lib/seed";
 import { LOW_STOCK_THRESHOLD } from "@/lib/types";
 import type { Order, Product, ContactInquiry, Invoice } from "@/lib/types";
 import StockInboundButton from "@/components/admin/StockInboundButton";
@@ -64,6 +65,8 @@ export default function AdminDashboard() {
   });
   const [seeding, setSeeding] = useState(false);
   const [seedMessage, setSeedMessage] = useState("");
+  const [refreshingImages, setRefreshingImages] = useState(false);
+  const [imageMessage, setImageMessage] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,6 +144,26 @@ export default function AdminDashboard() {
       );
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const handleRefreshImages = async () => {
+    setRefreshingImages(true);
+    setImageMessage("");
+    try {
+      const result = await refreshSampleProductImages();
+      setImageMessage(
+        result.updated > 0
+          ? `${result.updated} Beispielprodukt-Bilder wurden aktualisiert.`
+          : "Keine Beispielprodukte zum Aktualisieren gefunden."
+      );
+      await load();
+    } catch (err) {
+      setImageMessage(
+        err instanceof Error ? err.message : "Bilder konnten nicht aktualisiert werden"
+      );
+    } finally {
+      setRefreshingImages(false);
     }
   };
 
@@ -437,6 +460,44 @@ export default function AdminDashboard() {
                   className={`mt-4 text-sm ${seedMessage.includes("angelegt") ? "text-green-700" : "text-red-600"}`}
                 >
                   {seedMessage}
+                </p>
+              )}
+            </div>
+          )}
+
+          {products.length > 0 && (
+            <div className="bg-linen border border-wood/10 p-4 sm:p-6">
+              <h2 className="font-display text-lg font-light text-wood-dark mb-1 flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-forest" />
+                Beispielbilder
+              </h2>
+              <p className="text-sm text-stone mb-4">
+                Produktbilder der Beispielartikel mit passenden, funktionierenden Fotos
+                aktualisieren.
+              </p>
+              <Button
+                onClick={handleRefreshImages}
+                disabled={refreshingImages}
+                variant="secondary"
+                className="w-full sm:w-auto"
+              >
+                {refreshingImages ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Bilder werden aktualisiert...
+                  </>
+                ) : (
+                  <>
+                    <ImageIcon className="w-4 h-4" />
+                    Beispielbilder aktualisieren
+                  </>
+                )}
+              </Button>
+              {imageMessage && (
+                <p
+                  className={`mt-4 text-sm ${imageMessage.includes("aktualisiert") ? "text-green-700" : "text-red-600"}`}
+                >
+                  {imageMessage}
                 </p>
               )}
             </div>

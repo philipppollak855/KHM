@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import PosDashboardLink from "@/components/pos/PosDashboardLink";
+import { usePosUrlNavigation } from "@/hooks/usePosUrlNavigation";
 import {
   ShoppingCart,
   User,
@@ -48,15 +49,15 @@ const walkInCustomer = (): PosCustomer => ({
 });
 
 export default function PosApp() {
-  const [view, setView] = useState<View>("catalog");
+  const { view, cartOpen, customerOpen, setView, setCartOpen, setCustomerOpen } =
+    usePosUrlNavigation();
+  const prevViewRef = useRef(view);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryId, setCategoryId] = useState<string | "all">("all");
   const [productSearch, setProductSearch] = useState("");
   const [cart, setCart] = useState<PosCartItem[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
   const [customer, setCustomer] = useState<PosCustomer>(walkInCustomer());
-  const [customerOpen, setCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<
     Array<{ id: string; name: string; email: string; address: Address | null }>
@@ -88,6 +89,16 @@ export default function PosApp() {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (prevViewRef.current === "success" && view !== "success") {
+      setSaleResult(null);
+      setTempPassword(null);
+      setEmailStatus("");
+      setCardReference("");
+    }
+    prevViewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     setCatalogLoading(true);
