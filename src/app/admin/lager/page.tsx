@@ -15,6 +15,8 @@ import { LOW_STOCK_THRESHOLD } from "@/lib/types";
 import type { Product, StockMovement } from "@/lib/types";
 import StockInboundButton from "@/components/admin/StockInboundButton";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminDataTable from "@/components/admin/AdminDataTable";
 import { matchesSearch } from "@/lib/search";
 import Button from "@/components/ui/Button";
 
@@ -79,14 +81,10 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-light text-wood-dark mb-1">
-          Lager
-        </h1>
-        <p className="text-stone text-sm">
-          Bestände prüfen, nachbestellen und ein- oder ausbuchen
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Lager"
+        description="Bestände prüfen, nachbestellen und ein- oder ausbuchen"
+      />
 
       <AdminSearchBar
         value={search}
@@ -102,8 +100,71 @@ export default function AdminInventoryPage() {
         </div>
       )}
 
-      <div className="bg-linen border border-wood/10 overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="lg:hidden space-y-3">
+        {filteredProducts.map((p) => (
+          <article key={p.id} className="bg-linen border border-wood/10 p-4 rounded-lg space-y-3">
+            <div className="flex justify-between gap-3">
+              <div>
+                <Link href="/admin/produkte" className="font-medium text-wood-dark">
+                  {p.name}
+                </Link>
+                <p className="text-xs text-stone">{formatPrice(p.price)}</p>
+              </div>
+              <span
+                className={`text-xl font-semibold ${
+                  p.stock <= 0
+                    ? "text-red-600"
+                    : p.stock <= LOW_STOCK_THRESHOLD
+                      ? "text-amber-700"
+                      : "text-wood-dark"
+                }`}
+              >
+                {p.stock}
+              </span>
+            </div>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full inline-block ${
+                p.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {p.active ? "Aktiv" : "Inaktiv"}
+            </span>
+            <div className="flex flex-col gap-2 pt-2 border-t border-wood/10">
+              <StockInboundButton
+                productId={p.id}
+                productName={p.name}
+                label="Einbuchen"
+                onSuccess={load}
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Menge"
+                  value={outboundQty[p.id] || ""}
+                  onChange={(e) =>
+                    setOutboundQty((prev) => ({ ...prev, [p.id]: e.target.value }))
+                  }
+                  className="flex-1 rounded-lg border border-wood/20 bg-cream px-3 py-2.5 text-base"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => handleOutbound(p.id, p.name)}
+                >
+                  <PackageMinus className="w-4 h-4" />
+                  Ausbuchen
+                </Button>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden lg:block">
+      <AdminDataTable minWidth="800px">
+      <table className="w-full text-sm">
           <thead className="bg-wood/5">
             <tr>
               <th className="text-left p-4 font-medium text-wood-dark">Produkt</th>
@@ -186,6 +247,7 @@ export default function AdminInventoryPage() {
             ))}
           </tbody>
         </table>
+      </AdminDataTable>
       </div>
 
       <section>

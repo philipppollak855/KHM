@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getInvoices, formatPrice, formatDate } from "@/lib/firestore";
 import { sendInvoiceReminder } from "@/lib/admin-api";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import type { Invoice } from "@/lib/types";
 
 const reminderLabels = ["Keine", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"];
@@ -47,12 +48,12 @@ export default function AdminDunningPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-light text-wood-dark mb-2">Mahnwesen</h1>
-      <p className="text-stone text-sm mb-6">
-        Automatische Mahnungen laufen täglich per Cron. Hier können Mahnungen manuell ausgelöst werden.
-      </p>
+      <AdminPageHeader
+        title="Mahnwesen"
+        description="Automatische Mahnungen laufen täglich per Cron. Hier können Mahnungen manuell ausgelöst werden."
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
         <div className="bg-cream border border-wood/10 p-4">
           <p className="text-xs text-stone uppercase">Offene Rechnungen</p>
           <p className="text-2xl font-display">{invoices.length}</p>
@@ -82,7 +83,7 @@ export default function AdminDunningPage() {
           {overdue.map((inv) => (
             <div
               key={inv.id}
-              className="flex flex-wrap items-center justify-between gap-4 p-4 bg-cream border border-wood/10"
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-cream border border-wood/10 rounded-lg"
             >
               <div>
                 <p className="font-medium">{inv.invoiceNumber}</p>
@@ -97,7 +98,7 @@ export default function AdminDunningPage() {
               <button
                 onClick={() => handleRemind(inv.id)}
                 disabled={actionId === inv.id}
-                className="px-4 py-2 bg-forest text-linen text-sm disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-forest text-linen text-sm disabled:opacity-50 rounded-lg"
               >
                 {actionId === inv.id ? "Senden…" : "Mahnung senden"}
               </button>

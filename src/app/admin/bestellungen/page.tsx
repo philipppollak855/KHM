@@ -6,6 +6,7 @@ import { downloadOrderConfirmationPdf, downloadDeliveryNotePdf } from "@/lib/doc
 import type { Order } from "@/lib/types";
 import DownloadButton from "@/components/documents/DownloadButton";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { matchesSearch } from "@/lib/search";
 
 const statuses: Order["status"][] = [
@@ -58,8 +59,10 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-light text-wood-dark mb-2">Bestellungen</h1>
-      <p className="text-stone text-sm mb-6">Auftragsbestätigung und Lieferschein bei Statusänderung</p>
+      <AdminPageHeader
+        title="Bestellungen"
+        description="Auftragsbestätigung und Lieferschein bei Statusänderung"
+      />
 
       <AdminSearchBar
         value={search}
@@ -71,7 +74,7 @@ export default function AdminOrdersPage() {
 
       <div className="space-y-4">
         {filteredOrders.map((order) => (
-          <div key={order.id} className="bg-cream border border-wood/10 p-6">
+          <div key={order.id} className="bg-cream border border-wood/10 p-4 sm:p-6 rounded-lg">
             <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
               <div>
                 <p className="font-semibold text-wood-dark text-lg">{order.orderNumber}</p>
@@ -90,7 +93,7 @@ export default function AdminOrdersPage() {
                 <select
                   value={order.status}
                   onChange={(e) => handleStatusChange(order.id, e.target.value as Order["status"])}
-                  className="rounded-lg border-2 border-wood/20 bg-linen px-3 py-1.5 text-sm"
+                  className="w-full sm:w-auto rounded-lg border-2 border-wood/20 bg-linen px-3 py-2.5 text-base sm:text-sm"
                 >
                   {statuses.map((s) => (
                     <option key={s} value={s}>{statusLabels[s]}</option>

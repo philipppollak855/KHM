@@ -16,8 +16,8 @@ export default function AdminSearchBar({
   totalCount,
 }: AdminSearchBarProps) {
   return (
-    <div className="mb-6">
-      <div className="relative max-w-md">
+    <div className="mb-4 sm:mb-6">
+      <div className="relative w-full sm:max-w-md">
         <Search
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone"
           strokeWidth={1.5}
@@ -27,7 +27,7 @@ export default function AdminSearchBar({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-lg border-2 border-wood/20 bg-linen pl-10 pr-10 py-2.5 text-sm text-wood-dark placeholder:text-stone focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
+          className="w-full rounded-lg border-2 border-wood/20 bg-linen pl-10 pr-10 py-3 sm:py-2.5 text-base sm:text-sm text-wood-dark placeholder:text-stone focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/20"
         />
         {value && (
           <button
