@@ -13,6 +13,7 @@ import {
   pwaLauncherPages,
   type PwaLauncherModule,
 } from "@/lib/pwa-launcher";
+import { usePwaBottomNavInset } from "@/hooks/usePwaBottomNavInset";
 
 function LauncherTile({ module }: { module: PwaLauncherModule }) {
   const Icon = module.icon;
@@ -55,6 +56,7 @@ function formatDate(date: Date) {
 export default function PwaLauncher() {
   const { logout } = useAuth();
   const { company } = useCompanyBranding();
+  usePwaBottomNavInset(true);
   const [now, setNow] = useState(() => new Date());
   const { scrollerRef, activePage, scrollToPage } = useSwipePages(
     pwaLauncherPages.length

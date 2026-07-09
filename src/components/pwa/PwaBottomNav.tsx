@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -15,6 +15,7 @@ import {
   getActiveNavHubId,
   isNavLinkActive,
 } from "@/lib/admin-nav";
+import { PWA_MOBILE_NAV_MQ } from "@/lib/pwa-layout";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 
 type Tab = {
@@ -71,30 +72,38 @@ const tabs: Tab[] = [
 export default function PwaBottomNav() {
   const pathname = usePathname() || "/";
   const isPwa = useIsStandalonePwa();
+  const navRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof document === "undefined") return;
 
     const root = document.documentElement;
+    const el = navRef.current;
 
-    if (!isPwa) {
+    if (!isPwa || !el) {
       root.style.setProperty("--pwa-bottom-nav", "0px");
       return;
     }
 
-    const mq = window.matchMedia("(max-width: 1023px)");
-    const syncInset = () => {
-      root.style.setProperty(
-        "--pwa-bottom-nav",
-        mq.matches ? PWA_BOTTOM_NAV_HEIGHT : "0px"
-      );
+    const mq = window.matchMedia(PWA_MOBILE_NAV_MQ);
+
+    const syncHeight = () => {
+      if (!mq.matches) {
+        root.style.setProperty("--pwa-bottom-nav", "0px");
+        return;
+      }
+      const height = Math.ceil(el.getBoundingClientRect().height);
+      root.style.setProperty("--pwa-bottom-nav", `${height}px`);
     };
 
-    syncInset();
-    mq.addEventListener("change", syncInset);
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(el);
+    mq.addEventListener("change", syncHeight);
 
     return () => {
-      mq.removeEventListener("change", syncInset);
+      observer.disconnect();
+      mq.removeEventListener("change", syncHeight);
       root.style.setProperty("--pwa-bottom-nav", "0px");
     };
   }, [isPwa]);
@@ -103,7 +112,8 @@ export default function PwaBottomNav() {
 
   return (
     <nav
-      className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-50 lg:hidden"
+      ref={navRef}
+      className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 lg:hidden"
       aria-label="Hauptnavigation"
     >
       <div className="mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
@@ -135,4 +145,4 @@ export default function PwaBottomNav() {
   );
 }
 
-export const PWA_BOTTOM_NAV_HEIGHT = "5.75rem";
+export { PWA_BOTTOM_NAV_HEIGHT } from "@/lib/pwa-layout";

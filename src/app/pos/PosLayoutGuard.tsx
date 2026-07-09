@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import PwaRootGuard from "@/components/pwa/PwaRootGuard";
 import PwaBottomNav from "@/components/pwa/PwaBottomNav";
+import { usePwaBottomNavInset } from "@/hooks/usePwaBottomNavInset";
 
 export default function PosLayoutGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAdmin, loading } = useAuth();
+
+  usePwaBottomNavInset(!loading && !!user && isAdmin);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) {

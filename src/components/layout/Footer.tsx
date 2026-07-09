@@ -6,13 +6,13 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
 
-export default function Footer() {
+export default function Footer({ className }: { className?: string }) {
   const pathname = usePathname();
   const { company } = useCompanyBranding();
   if (pathname.startsWith("/admin")) return null;
 
   return (
-    <footer className="bg-wood-dark text-linen mt-auto">
+    <footer className={`bg-wood-dark text-linen mt-auto ${className ?? ""}`}>
       <div className="h-px bg-gradient-to-r from-transparent via-wheat/20 to-transparent" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12">

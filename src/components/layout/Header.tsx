@@ -6,8 +6,6 @@ import { ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
-import { getAdminHomePath } from "@/lib/auth-redirect";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 
 const navLinks = [
@@ -22,8 +20,6 @@ export default function Header() {
   const isHome = pathname === "/";
   const { user, isAdmin, logout } = useAuth();
   const { totalItems } = useCart();
-  const isPwa = useIsStandalonePwa();
-  const adminHref = getAdminHomePath({ pwa: isPwa });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -91,7 +87,7 @@ export default function Header() {
               <div className="hidden sm:flex items-center gap-1">
                 {isAdmin && (
                   <Link
-                    href={adminHref}
+                    href="/admin/start"
                     className={`text-xs tracking-wider uppercase px-3 py-2 transition-colors ${
                       transparent ? "text-linen/70 hover:text-linen" : "text-forest hover:text-forest-light"
                     }`}
@@ -168,7 +164,7 @@ export default function Header() {
                 </Link>
                 {isAdmin && (
                   <Link
-                    href={adminHref}
+                    href="/admin/start"
                     onClick={() => setMobileOpen(false)}
                     className="block px-4 py-3 text-sm tracking-wider uppercase text-forest"
                   >

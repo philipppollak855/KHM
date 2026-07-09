@@ -24,6 +24,7 @@ import {
   type AdminNavHubId,
 } from "@/lib/admin-nav";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import { usePwaBottomNavInset } from "@/hooks/usePwaBottomNavInset";
 import { usePwaHubMenu } from "@/hooks/usePwaHubMenu";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
 import CompanyLogo from "@/components/branding/CompanyLogo";
@@ -302,6 +303,7 @@ export default function AdminShell({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const isPwa = useIsStandalonePwa();
+  usePwaBottomNavInset(isPwa);
   const { company } = useCompanyBranding();
   const { mobileOpen, mobileFocusHub, openMobileMenu, closeMobileMenu } = usePwaHubMenu();
 
