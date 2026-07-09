@@ -3,8 +3,9 @@
 import { useEffect, useRef } from "react";
 import {
   ensurePwaRootHistory,
-  isStandalonePwa,
+  isPwaRootPath,
   rearmPwaRootHistory,
+  shouldGuardPwaBack,
 } from "@/lib/pwa-history";
 
 type BackHandler = () => boolean;
@@ -20,8 +21,8 @@ function handlePopState() {
     }
   }
 
-  const state = window.history.state as { pwaRoot?: boolean } | null;
-  if (state?.pwaRoot && isStandalonePwa()) {
+  const pathname = window.location.pathname || "/";
+  if (shouldGuardPwaBack(pathname)) {
     rearmPwaRootHistory();
   }
 }
@@ -30,6 +31,11 @@ function attachPopstateListener() {
   if (listenerAttached || typeof window === "undefined") return;
   window.addEventListener("popstate", handlePopState);
   listenerAttached = true;
+}
+
+/** Früh registrieren, damit Doppel-Zurück auf Root-Screens abgefangen wird. */
+export function initPwaBackListener() {
+  attachPopstateListener();
 }
 
 export function usePwaBackNavigation(handler: BackHandler, enabled = true) {
@@ -52,9 +58,7 @@ export function usePwaBackNavigation(handler: BackHandler, enabled = true) {
 
 export function usePwaRootGuard(pathname: string) {
   useEffect(() => {
-    const isAdminRoot = pathname === "/admin" || pathname === "/admin/start";
-    const isPosRoot = pathname === "/pos";
-    if (!isAdminRoot && !isPosRoot) return;
+    if (!isPwaRootPath(pathname)) return;
     ensurePwaRootHistory();
   }, [pathname]);
 }

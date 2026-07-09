@@ -2,12 +2,18 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { usePwaRootGuard } from "@/hooks/usePwaBackNavigation";
+import { usePwaRootGuard, initPwaBackListener } from "@/hooks/usePwaBackNavigation";
 import { isStandalonePwa } from "@/lib/pwa-history";
 
 export default function PwaRootGuard() {
   const pathname = usePathname() || "/";
   usePwaRootGuard(pathname);
+
+  useEffect(() => {
+    if (isStandalonePwa()) {
+      initPwaBackListener();
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
