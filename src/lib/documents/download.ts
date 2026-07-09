@@ -4,6 +4,7 @@ import {
   getOrder,
   getDeliveryNote,
 } from "../firestore";
+import { fetchBrandingImageData } from "../branding-image";
 import {
   generateInvoicePdf,
   generateInvoicePdfBlob,
@@ -81,7 +82,8 @@ export async function downloadInvoicePdf(invoiceId: string) {
     getCompanySettings(),
   ]);
   if (!invoice) throw new Error("Rechnung nicht gefunden");
-  generateInvoicePdf(invoice, company);
+  const logo = await fetchBrandingImageData(company.logoUrl);
+  generateInvoicePdf(invoice, company, logo);
 }
 
 export async function printInvoicePdf(invoiceId: string) {
@@ -91,11 +93,12 @@ export async function printInvoicePdf(invoiceId: string) {
   ]);
   if (!invoice) throw new Error("Rechnung nicht gefunden");
 
-  const blob = generateInvoicePdfBlob(invoice, company, { autoPrint: true });
+  const logo = await fetchBrandingImageData(company.logoUrl);
+  const blob = generateInvoicePdfBlob(invoice, company, { autoPrint: true, logo });
   try {
     await printPdfBlob(blob, `Rechnung ${invoice.invoiceNumber}`);
   } catch {
-    generateInvoicePdf(invoice, company);
+    generateInvoicePdf(invoice, company, logo);
     throw new Error(
       "Druckdialog konnte nicht geöffnet werden. PDF wurde heruntergeladen – bitte dort drucken."
     );
@@ -108,7 +111,8 @@ export async function downloadOrderConfirmationPdf(orderId: string) {
     getCompanySettings(),
   ]);
   if (!order) throw new Error("Bestellung nicht gefunden");
-  generateOrderConfirmationPdf(order, company);
+  const logo = await fetchBrandingImageData(company.logoUrl);
+  generateOrderConfirmationPdf(order, company, logo);
 }
 
 export async function downloadDeliveryNotePdf(noteId: string) {
@@ -117,5 +121,6 @@ export async function downloadDeliveryNotePdf(noteId: string) {
     getCompanySettings(),
   ]);
   if (!note) throw new Error("Lieferschein nicht gefunden");
-  generateDeliveryNotePdf(note, company);
+  const logo = await fetchBrandingImageData(company.logoUrl);
+  generateDeliveryNotePdf(note, company, logo);
 }

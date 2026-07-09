@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import type { CompanySettings, Order, Invoice, DeliveryNote, OrderItem, TaxBreakdownLine } from "../types";
 import { formatPrice, formatDate } from "../firestore";
 import { resolveDocumentCustomerName, resolveDocumentSalutation } from "../customer-display";
+import type { BrandingImageData } from "../branding-image";
 
 const FOREST: [number, number, number] = [61, 79, 50];
 const WOOD: [number, number, number] = [44, 33, 24];
@@ -12,29 +13,45 @@ function fmt(n: number) {
   return formatPrice(n);
 }
 
-function drawLetterhead(doc: jsPDF, company: CompanySettings, docTitle: string, docNumber: string) {
+function drawLetterhead(
+  doc: jsPDF,
+  company: CompanySettings,
+  docTitle: string,
+  docNumber: string,
+  logo?: BrandingImageData | null
+) {
   const w = doc.internal.pageSize.getWidth();
 
   doc.setFillColor(...FOREST);
   doc.rect(0, 0, w, 4, "F");
 
+  let textX = 20;
+  if (logo) {
+    try {
+      doc.addImage(logo.dataUrl, logo.format, 20, 10, 38, 18);
+      textX = 62;
+    } catch {
+      textX = 20;
+    }
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
   doc.setTextColor(...WOOD);
-  doc.text(company.name, 20, 22);
+  doc.text(company.name, textX, 22);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
-  doc.text(company.tagline, 20, 28);
+  doc.text(company.tagline, textX, 28);
   doc.text(
     `${company.street} · ${company.zip} ${company.city} · ${company.country}`,
-    20,
+    textX,
     33
   );
   doc.text(
     `${company.email} · ${company.phone} · UID: ${company.uid}`,
-    20,
+    textX,
     38
   );
 
@@ -158,10 +175,11 @@ function downloadPdf(doc: jsPDF, filename: string) {
 
 export function buildInvoicePdfDocument(
   invoice: Invoice,
-  company: CompanySettings
+  company: CompanySettings,
+  logo?: BrandingImageData | null
 ): jsPDF {
   const doc = new jsPDF();
-  drawLetterhead(doc, company, "RECHNUNG", invoice.invoiceNumber);
+  drawLetterhead(doc, company, "RECHNUNG", invoice.invoiceNumber, logo);
 
   drawAddressBlock(
     doc,
@@ -201,7 +219,7 @@ export function buildInvoicePdfDocument(
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
   doc.text(
-    "Vielen Dank für Ihren Einkauf bei KHM.",
+    `Vielen Dank für Ihren Einkauf bei ${company.name}.`,
     20,
     finalY + 30
   );
@@ -210,34 +228,43 @@ export function buildInvoicePdfDocument(
   return doc;
 }
 
-export function invoicePdfToBuffer(
+export async function invoicePdfToBuffer(
   invoice: Invoice,
-  company: CompanySettings
-): Buffer {
-  const doc = buildInvoicePdfDocument(invoice, company);
+  company: CompanySettings,
+  logo?: BrandingImageData | null
+): Promise<Buffer> {
+  const doc = buildInvoicePdfDocument(invoice, company, logo);
   return Buffer.from(doc.output("arraybuffer"));
 }
 
-export function generateInvoicePdf(invoice: Invoice, company: CompanySettings) {
-  const doc = buildInvoicePdfDocument(invoice, company);
+export function generateInvoicePdf(
+  invoice: Invoice,
+  company: CompanySettings,
+  logo?: BrandingImageData | null
+) {
+  const doc = buildInvoicePdfDocument(invoice, company, logo);
   downloadPdf(doc, `Rechnung_${invoice.invoiceNumber}.pdf`);
 }
 
 export function generateInvoicePdfBlob(
   invoice: Invoice,
   company: CompanySettings,
-  options?: { autoPrint?: boolean }
+  options?: { autoPrint?: boolean; logo?: BrandingImageData | null }
 ): Blob {
-  const doc = buildInvoicePdfDocument(invoice, company);
+  const doc = buildInvoicePdfDocument(invoice, company, options?.logo);
   if (options?.autoPrint) {
     doc.autoPrint({ variant: "non-conform" });
   }
   return doc.output("blob");
 }
 
-export function generateOrderConfirmationPdf(order: Order, company: CompanySettings) {
+export function generateOrderConfirmationPdf(
+  order: Order,
+  company: CompanySettings,
+  logo?: BrandingImageData | null
+) {
   const doc = new jsPDF();
-  drawLetterhead(doc, company, "AUFTRAGSBESTÄTIGUNG", order.orderNumber);
+  drawLetterhead(doc, company, "AUFTRAGSBESTÄTIGUNG", order.orderNumber, logo);
 
   drawAddressBlock(
     doc,
@@ -290,9 +317,13 @@ export function generateOrderConfirmationPdf(order: Order, company: CompanySetti
   downloadPdf(doc, `Auftragsbestaetigung_${order.orderNumber}.pdf`);
 }
 
-export function generateDeliveryNotePdf(note: DeliveryNote, company: CompanySettings) {
+export function generateDeliveryNotePdf(
+  note: DeliveryNote,
+  company: CompanySettings,
+  logo?: BrandingImageData | null
+) {
   const doc = new jsPDF();
-  drawLetterhead(doc, company, "LIEFERSCHEIN", note.deliveryNoteNumber);
+  drawLetterhead(doc, company, "LIEFERSCHEIN", note.deliveryNoteNumber, logo);
 
   drawAddressBlock(
     doc,

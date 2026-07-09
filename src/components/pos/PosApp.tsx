@@ -5,6 +5,7 @@ import Image from "next/image";
 import PosDashboardLink from "@/components/pos/PosDashboardLink";
 import { usePosUrlNavigation } from "@/hooks/usePosUrlNavigation";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import CompanyLogo from "@/components/branding/CompanyLogo";
 import {
   ShoppingCart,
   User,
@@ -580,8 +581,10 @@ export default function PosApp() {
     <div className="min-h-dvh flex flex-col">
       <header className="sticky top-0 z-30 bg-wood-dark/95 backdrop-blur border-b border-linen/10 px-4 py-3">
         <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-linen/50">KHM Kassa</p>
+          <div className="min-w-0 flex-1 flex items-center gap-3">
+            <CompanyLogo variant="mark" size="sm" dark />
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-linen/50">Kassa</p>
             <button
               onClick={() => setCustomerOpen(true)}
               className="flex items-center gap-2 text-linen text-sm mt-0.5 max-w-full"
@@ -589,6 +592,7 @@ export default function PosApp() {
               <User className="w-4 h-4 text-wheat shrink-0" />
               <span className="truncate">{getPosCustomerLabel(customer)}</span>
             </button>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!isPwa && <PosDashboardLink compact />}

@@ -23,10 +23,12 @@ import {
   type AdminNavGroup,
   type AdminNavHubId,
 } from "@/lib/admin-nav";
-import MobileHubNav from "@/components/admin/MobileHubNav";
-import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import { usePwaHubMenu } from "@/hooks/usePwaHubMenu";
+import { useCompanyBranding } from "@/context/CompanyBrandingContext";
+import CompanyLogo from "@/components/branding/CompanyLogo";
 import PwaBottomNav from "@/components/pwa/PwaBottomNav";
+import PwaHubMenuDrawer from "@/components/pwa/PwaHubMenuDrawer";
 
 function NavLinkItem({
   href,
@@ -298,35 +300,13 @@ export default function AdminShell({
   onLogout: () => void;
 }) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileFocusHub, setMobileFocusHub] = useState<AdminNavHubId | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const isPwa = useIsStandalonePwa();
+  const { company } = useCompanyBranding();
+  const { mobileOpen, mobileFocusHub, openMobileMenu, closeMobileMenu } = usePwaHubMenu();
 
   const currentPage = getCurrentNavPage(pathname);
   const currentHub = getCurrentNavHubLabel(pathname);
-
-  const openMobileMenu = (hub?: AdminNavHubId) => {
-    setMobileFocusHub(hub ?? null);
-    setMobileOpen(true);
-  };
-
-  usePwaOverlayBack(mobileOpen, "admin-menu", () => setMobileOpen(false));
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileOpen]);
 
   useEffect(() => {
     try {
@@ -360,12 +340,13 @@ export default function AdminShell({
         >
           <Menu className="w-6 h-6" />
         </button>
-        <div className="flex-1 min-w-0 text-center px-1">
-          <p className="font-display font-semibold truncate">
-            {currentPage?.label || "KHM Admin"}
+        <div className="flex-1 min-w-0 flex flex-col items-center px-1">
+          <CompanyLogo variant="mark" size="sm" dark className="mb-1" />
+          <p className="font-display font-semibold truncate text-sm">
+            {currentPage?.label || "Admin"}
           </p>
           <p className="text-[10px] text-cream/50 uppercase tracking-wider truncate">
-            {currentHub || (isPwa ? "KHM Verwaltung" : "Verwaltung")}
+            {currentHub || company.name}
           </p>
         </div>
         {!isPwa ? (
@@ -388,37 +369,12 @@ export default function AdminShell({
         )}
       </header>
 
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <button
-            type="button"
-            className="absolute inset-0 bg-wood-dark/60 backdrop-blur-sm"
-            aria-label="Menü schließen"
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside className="relative w-[min(92vw,22rem)] max-w-sm bg-wood-dark text-cream flex flex-col shadow-2xl pt-[env(safe-area-inset-top)]">
-            <div className="flex items-center justify-between p-4 border-b border-cream/10 shrink-0">
-              <div>
-                <p className="font-display text-lg font-bold">Navigation</p>
-                <p className="text-xs text-cream/50">5 Bereiche mit Unterpunkten</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMobileOpen(false)}
-                className="p-2 rounded-lg hover:bg-cream/10 touch-manipulation"
-                aria-label="Menü schließen"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <MobileHubNav
-              focusHub={mobileFocusHub}
-              onNavigate={() => setMobileOpen(false)}
-            />
-            <SidebarFooter onLogout={onLogout} onNavigate={() => setMobileOpen(false)} />
-          </aside>
-        </div>
-      )}
+      <PwaHubMenuDrawer
+        open={mobileOpen}
+        focusHub={mobileFocusHub}
+        onClose={closeMobileMenu}
+        onLogout={onLogout}
+      />
 
       <aside
         className={`hidden lg:flex flex-col bg-wood-dark text-cream shrink-0 transition-[width] duration-200 ${
@@ -431,11 +387,15 @@ export default function AdminShell({
           }`}
         >
           {!collapsed && (
-            <div>
-              <p className="font-display text-lg font-bold">KHM Admin</p>
-              <p className="text-xs text-cream/50 mt-0.5">Verwaltungsbereich</p>
+            <div className="flex items-center gap-3 min-w-0">
+              <CompanyLogo variant="mark" size="sm" dark />
+              <div className="min-w-0">
+                <p className="font-display text-lg font-bold truncate">{company.name}</p>
+                <p className="text-xs text-cream/50 mt-0.5 truncate">Verwaltungsbereich</p>
+              </div>
             </div>
           )}
+          {collapsed && <CompanyLogo variant="mark" size="sm" dark />}
           <button
             type="button"
             onClick={toggleCollapsed}
@@ -463,7 +423,7 @@ export default function AdminShell({
         </div>
       </main>
 
-      <PwaBottomNav onHubOpen={(hub) => openMobileMenu(hub)} />
+      <PwaBottomNav />
     </div>
   );
 }

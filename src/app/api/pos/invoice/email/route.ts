@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getCompanySettingsServer } from "@/lib/company-server";
 import { invoicePdfToBuffer } from "@/lib/documents/pdf";
+import { fetchBrandingImageData } from "@/lib/branding-image";
 import { sendInvoiceEmail, isEmailConfigured } from "@/lib/email";
 import { handleRouteError, parseJsonBody } from "@/lib/api-route";
 import type { Invoice } from "@/lib/types";
@@ -56,7 +57,8 @@ export async function POST(req: NextRequest) {
     } as Invoice;
 
     const company = await getCompanySettingsServer();
-    const pdfBuffer = invoicePdfToBuffer(invoice, company);
+    const logo = await fetchBrandingImageData(company.logoUrl);
+    const pdfBuffer = await invoicePdfToBuffer(invoice, company, logo);
 
     await sendInvoiceEmail({
       to: email,
@@ -66,6 +68,8 @@ export async function POST(req: NextRequest) {
       orderNumber: invoice.orderNumber,
       total: formatEuro(invoice.total),
       pdfBuffer,
+      companyName: company.name,
+      logoUrl: company.logoUrl,
     });
 
     return NextResponse.json({ success: true });

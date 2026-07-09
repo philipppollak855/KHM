@@ -82,6 +82,8 @@ export async function processDunningReminders() {
         iban: company.iban,
         bic: company.bic,
         bankName: company.bankName,
+        companyName: company.name,
+        logoUrl: company.logoUrl,
       });
 
       await doc.ref.update({
@@ -142,6 +144,8 @@ export async function sendManualReminder(invoiceId: string, adminUserId: string)
     iban: company.iban,
     bic: company.bic,
     bankName: company.bankName,
+    companyName: company.name,
+    logoUrl: company.logoUrl,
   });
 
   await doc.ref.update({

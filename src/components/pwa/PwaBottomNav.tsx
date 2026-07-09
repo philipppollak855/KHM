@@ -12,9 +12,7 @@ import {
 } from "lucide-react";
 import {
   getActiveNavHubId,
-  getNavGroupById,
   isNavLinkActive,
-  type AdminNavHubId,
 } from "@/lib/admin-nav";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 
@@ -22,8 +20,7 @@ type Tab = {
   id: string;
   label: string;
   icon: LucideIcon;
-  href?: string;
-  hubId?: AdminNavHubId;
+  href: string;
   isActive: (pathname: string) => boolean;
 };
 
@@ -39,7 +36,7 @@ const tabs: Tab[] = [
     id: "sales",
     label: "Verkauf",
     icon: ShoppingCart,
-    hubId: "sales",
+    href: "/admin/bestellungen",
     isActive: (pathname) =>
       isNavLinkActive(pathname, "/admin/bestellungen") ||
       isNavLinkActive(pathname, "/admin/kunden") ||
@@ -49,7 +46,7 @@ const tabs: Tab[] = [
     id: "invoices",
     label: "Rechnungen",
     icon: FileText,
-    hubId: "invoices",
+    href: "/admin/rechnungen",
     isActive: (pathname) =>
       isNavLinkActive(pathname, "/admin/rechnungen") ||
       isNavLinkActive(pathname, "/admin/mahnungen"),
@@ -65,16 +62,12 @@ const tabs: Tab[] = [
     id: "shop",
     label: "Shop",
     icon: Package,
-    hubId: "shop",
+    href: "/admin/produkte",
     isActive: (pathname) => getActiveNavHubId(pathname) === "shop",
   },
 ];
 
-export default function PwaBottomNav({
-  onHubOpen,
-}: {
-  onHubOpen?: (hubId: AdminNavHubId) => void;
-}) {
+export default function PwaBottomNav() {
   const pathname = usePathname() || "/";
   const isPwa = useIsStandalonePwa();
 
@@ -95,37 +88,6 @@ export default function PwaBottomNav({
                 ? "bg-forest text-cream"
                 : "text-cream/55 hover:text-cream hover:bg-cream/5"
             }`;
-
-            if (tab.hubId && onHubOpen) {
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onHubOpen(tab.hubId!)}
-                  className={baseClass}
-                  aria-label={`${tab.label} – Unterpunkte anzeigen`}
-                >
-                  <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
-                  <span className="text-[10px] font-medium leading-none">{tab.label}</span>
-                </button>
-              );
-            }
-
-            if (tab.hubId) {
-              const fallbackHref =
-                getNavGroupById(tab.hubId)?.items[0]?.href ?? "/admin/start";
-              return (
-                <Link
-                  key={tab.id}
-                  href={fallbackHref}
-                  className={baseClass}
-                  aria-label={tab.label}
-                >
-                  <Icon className="w-5 h-5" strokeWidth={1.75} />
-                  <span className="text-[10px] font-medium leading-none">{tab.label}</span>
-                </Link>
-              );
-            }
 
             return (
               <Link

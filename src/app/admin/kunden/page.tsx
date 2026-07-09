@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { getUsers, getOrders, getInvoices, formatDate } from "@/lib/firestore";
 import type { Invoice, Order, User } from "@/lib/types";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminDataTable from "@/components/admin/AdminDataTable";
 import CustomerBadges from "@/components/admin/CustomerBadges";
+import CustomerDetailPanel from "@/components/admin/CustomerDetailPanel";
 import { buildCustomerStats } from "@/lib/badges";
 import { matchesSearch } from "@/lib/search";
+import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<User[]>([]);
@@ -16,6 +18,10 @@ export default function AdminCustomersPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
   const [badgeFilter, setBadgeFilter] = useState<"all" | "open" | "pos" | "online">("all");
+  const [selectedCustomer, setSelectedCustomer] = useState<User | null>(null);
+
+  const closeDetail = useCallback(() => setSelectedCustomer(null), []);
+  usePwaOverlayBack(!!selectedCustomer, "customer-detail", closeDetail);
 
   useEffect(() => {
     Promise.all([getUsers(), getOrders(), getInvoices()])
@@ -94,7 +100,12 @@ export default function AdminCustomersPage() {
 
       <div className="lg:hidden space-y-3">
         {filteredCustomers.map((c) => (
-          <article key={c.id} className="bg-cream border border-wood/10 p-4 rounded-lg">
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => setSelectedCustomer(c)}
+            className="w-full text-left bg-cream border border-wood/10 p-4 rounded-lg hover:border-forest/30 active:bg-linen transition-colors"
+          >
             <p className="font-semibold text-wood-dark">{c.displayName || "–"}</p>
             <p className="text-sm text-stone break-all">{c.email}</p>
             <CustomerBadges
@@ -111,7 +122,7 @@ export default function AdminCustomersPage() {
             <p className="text-xs text-stone/80 mt-2">
               Registriert {formatDate(c.createdAt)}
             </p>
-          </article>
+          </button>
         ))}
         {filteredCustomers.length === 0 && (
           <p className="text-center text-stone py-8">
@@ -133,7 +144,11 @@ export default function AdminCustomersPage() {
             </thead>
             <tbody>
               {filteredCustomers.map((c) => (
-                <tr key={c.id} className="border-t border-wood/10 align-top">
+                <tr
+                  key={c.id}
+                  onClick={() => setSelectedCustomer(c)}
+                  className="border-t border-wood/10 align-top cursor-pointer hover:bg-forest/5 transition-colors"
+                >
                   <td className="p-4 font-medium">{c.displayName || "–"}</td>
                   <td className="p-4">
                     <p>{c.email}</p>
@@ -161,6 +176,15 @@ export default function AdminCustomersPage() {
           </table>
         </AdminDataTable>
       </div>
+
+      {selectedCustomer && (
+        <CustomerDetailPanel
+          customer={selectedCustomer}
+          orders={orders}
+          invoices={invoices}
+          onClose={closeDetail}
+        />
+      )}
     </div>
   );
 }

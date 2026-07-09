@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { getInvoices, formatPrice, formatDate } from "@/lib/firestore";
 import { downloadInvoicePdf, printInvoicePdf } from "@/lib/documents/download";
 import { confirmInvoicePayment, sendInvoiceReminder } from "@/lib/admin-api";
@@ -19,6 +20,10 @@ import AdminPeriodFilter, {
   useDefaultCustomRange,
 } from "@/components/admin/AdminPeriodFilter";
 import AdminReportCards, { AdminFilterChips } from "@/components/admin/AdminReportCards";
+import {
+  getInvoiceListHref,
+  parseInvoiceListUrlFilters,
+} from "@/lib/admin-invoice-filters";
 
 const statusLabels: Record<Invoice["status"], string> = {
   draft: "Entwurf",
@@ -53,6 +58,17 @@ function InvoiceStatusBadge({ inv }: { inv: Invoice }) {
 }
 
 export default function AdminInvoicesPage() {
+  return (
+    <Suspense
+      fallback={<p className="text-stone py-12 text-center">Rechnungen werden geladen…</p>}
+    >
+      <AdminInvoicesPageContent />
+    </Suspense>
+  );
+}
+
+function AdminInvoicesPageContent() {
+  const searchParams = useSearchParams();
   const defaultRange = useDefaultCustomRange();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
@@ -60,6 +76,7 @@ export default function AdminInvoicesPage() {
   const [customFrom, setCustomFrom] = useState(defaultRange.from);
   const [customTo, setCustomTo] = useState(defaultRange.to);
   const [statusFilter, setStatusFilter] = useState<"all" | Invoice["status"]>("all");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [channelFilter, setChannelFilter] = useState<"all" | "pos" | "online">("all");
   const [loading, setLoading] = useState(true);
   const [confirmingInvoice, setConfirmingInvoice] = useState<Invoice | null>(null);
@@ -80,6 +97,13 @@ export default function AdminInvoicesPage() {
     load().catch(console.error);
   }, []);
 
+  useEffect(() => {
+    const fromUrl = parseInvoiceListUrlFilters(searchParams);
+    if (fromUrl.statusFilter !== undefined) setStatusFilter(fromUrl.statusFilter);
+    if (fromUrl.overdueOnly !== undefined) setOverdueOnly(fromUrl.overdueOnly);
+    if (fromUrl.periodPreset !== undefined) setPeriodPreset(fromUrl.periodPreset);
+  }, [searchParams]);
+
   const dateRange = useMemo(
     () => getActiveDateRange(periodPreset, customFrom, customTo),
     [periodPreset, customFrom, customTo]
@@ -90,6 +114,7 @@ export default function AdminInvoicesPage() {
       invoices.filter((inv) => {
         if (!isDateInRange(inv.issuedAt, dateRange)) return false;
         if (statusFilter !== "all" && inv.status !== statusFilter) return false;
+        if (overdueOnly && !(inv.status === "sent" && inv.dueAt < new Date())) return false;
         const isPos = inv.orderNumber.startsWith("POS-");
         if (channelFilter === "pos" && !isPos) return false;
         if (channelFilter === "online" && isPos) return false;
@@ -104,7 +129,7 @@ export default function AdminInvoicesPage() {
           formatPrice(inv.total),
         ]);
       }),
-    [invoices, search, dateRange, statusFilter, channelFilter]
+    [invoices, search, dateRange, statusFilter, overdueOnly, channelFilter]
   );
 
   const report = useMemo(() => computeInvoiceReport(filteredInvoices), [filteredInvoices]);
@@ -126,6 +151,7 @@ export default function AdminInvoicesPage() {
       value: formatPrice(report.openAmount),
       hint: `${report.openCount} Rechnung(en)`,
       accent: report.openCount > 0 ? "border-amber-200/80" : "",
+      href: getInvoiceListHref("open"),
     },
     {
       label: "Überfällig",
@@ -136,6 +162,7 @@ export default function AdminInvoicesPage() {
           .reduce((s, i) => s + i.total, 0)
       ) : "Keine überfälligen",
       accent: report.overdueCount > 0 ? "border-red-200/80 bg-red-50/40" : "",
+      href: report.overdueCount > 0 ? getInvoiceListHref("overdue") : undefined,
     },
     {
       label: "Volumen",
@@ -239,7 +266,10 @@ export default function AdminInvoicesPage() {
 
       <AdminFilterChips
         value={statusFilter}
-        onChange={setStatusFilter}
+        onChange={(value) => {
+          setStatusFilter(value);
+          if (value !== "sent") setOverdueOnly(false);
+        }}
         options={[
           { id: "all", label: "Alle Status" },
           { id: "paid", label: "Bezahlt" },
@@ -248,6 +278,21 @@ export default function AdminInvoicesPage() {
           { id: "cancelled", label: "Storniert" },
         ]}
       />
+
+      {overdueOnly && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs px-3 py-1.5 rounded-full bg-red-100 text-red-800 border border-red-200">
+            Nur überfällige Rechnungen
+          </span>
+          <button
+            type="button"
+            onClick={() => setOverdueOnly(false)}
+            className="text-xs text-stone hover:text-wood-dark underline"
+          >
+            Filter entfernen
+          </button>
+        </div>
+      )}
 
       <AdminFilterChips
         value={channelFilter}

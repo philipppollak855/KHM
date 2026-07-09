@@ -15,7 +15,7 @@ function validateImageFile(file: File) {
 
 async function uploadViaApi(
   file: File,
-  folder: "products" | "categories"
+  folder: "products" | "categories" | "branding"
 ): Promise<string> {
   const user = auth.currentUser;
   if (!user) {
@@ -43,7 +43,7 @@ async function uploadViaApi(
 
 async function uploadViaClient(
   file: File,
-  folder: "products" | "categories"
+  folder: "products" | "categories" | "branding"
 ): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -59,7 +59,7 @@ async function uploadViaClient(
 
 export async function uploadProductImage(
   file: File,
-  folder: "products" | "categories" = "products"
+  folder: "products" | "categories" | "branding" = "products"
 ): Promise<string> {
   validateImageFile(file);
 
@@ -78,6 +78,10 @@ export async function uploadProductImage(
 
 export async function uploadCategoryImage(file: File): Promise<string> {
   return uploadProductImage(file, "categories");
+}
+
+export async function uploadBrandingImage(file: File): Promise<string> {
+  return uploadProductImage(file, "branding");
 }
 
 export async function deleteStorageFile(url: string): Promise<void> {

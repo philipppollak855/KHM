@@ -27,5 +27,11 @@ service firebase.storage {
       allow write: if isAdmin() && isValidImage();
       allow delete: if isAdmin();
     }
+
+    match /branding/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
   }
 }

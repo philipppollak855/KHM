@@ -3,7 +3,10 @@ import { Cormorant_Garamond, Lora } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { CompanyBrandingProvider } from "@/context/CompanyBrandingContext";
 import LayoutShell from "@/components/layout/LayoutShell";
+import { getCompanySettingsServer } from "@/lib/company-server";
+import { getPwaShortName } from "@/lib/branding-image";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -19,29 +22,40 @@ const lora = Lora({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Kevin's Handmade Manufactur | Handgemacht aus dem Schneebergland",
-  description:
-    "Handgemachte Produkte aus dem Herzen des Schneeberglandes. Mit Liebe, Tradition und regionalen Materialien gefertigt.",
-  keywords: [
-    "handgemacht",
-    "Schneebergland",
-    "KHM",
-    "Kevin's Handmade",
-    "regional",
-    "Holz",
-    "Natur",
-  ],
-  manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "KHM Verwaltung",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const company = await getCompanySettingsServer();
+  const iconUrl = company.pwaIconUrl || company.logoUrl;
+
+  return {
+    title: `${company.name} | Handgemacht aus dem Schneebergland`,
+    description:
+      company.tagline ||
+      "Handgemachte Produkte aus dem Herzen des Schneeberglandes. Mit Liebe, Tradition und regionalen Materialien gefertigt.",
+    keywords: [
+      "handgemacht",
+      "Schneebergland",
+      company.name,
+      "regional",
+      "Holz",
+      "Natur",
+    ],
+    manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "black-translucent",
+      title: getPwaShortName(company.name),
+    },
+    icons: iconUrl
+      ? {
+          icon: [{ url: iconUrl }],
+          apple: [{ url: iconUrl }],
+        }
+      : undefined,
+    formatDetection: {
+      telephone: false,
+    },
+  };
+}
 
 export const viewport = {
   themeColor: "#3d4f32",
@@ -62,9 +76,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col wood-texture">
         <AuthProvider>
-          <CartProvider>
-            <LayoutShell>{children}</LayoutShell>
-          </CartProvider>
+          <CompanyBrandingProvider>
+            <CartProvider>
+              <LayoutShell>{children}</LayoutShell>
+            </CartProvider>
+          </CompanyBrandingProvider>
         </AuthProvider>
       </body>
     </html>

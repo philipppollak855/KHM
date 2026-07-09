@@ -6,6 +6,7 @@ import { ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import CompanyLogo from "@/components/branding/CompanyLogo";
 
 const navLinks = [
   { href: "/", label: "Start" },
@@ -44,31 +45,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <Link href="/" className="flex items-center gap-3 group">
-            <div
-              className={`w-10 h-10 flex items-center justify-center font-display text-lg font-light border transition-colors duration-300 ${
-                transparent
-                  ? "border-linen/40 text-linen"
-                  : "border-wood/20 text-wood-dark"
-              }`}
-            >
-              K
-            </div>
-            <div className="hidden sm:block">
-              <p
-                className={`font-display text-lg font-light leading-tight tracking-wide transition-colors ${
-                  transparent ? "text-linen" : "text-wood-dark"
-                }`}
-              >
-                Kevin&apos;s Handmade
-              </p>
-              <p
-                className={`text-[10px] tracking-[0.25em] uppercase transition-colors ${
-                  transparent ? "text-linen/50" : "text-stone"
-                }`}
-              >
-                Manufactur
-              </p>
-            </div>
+            <CompanyLogo variant="full" size="md" transparent={transparent} />
           </Link>
 
           <nav className="hidden md:flex items-center gap-10">

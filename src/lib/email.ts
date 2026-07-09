@@ -1,5 +1,10 @@
 import nodemailer from "nodemailer";
 import { resolveDocumentSalutation } from "./customer-display";
+import {
+  buildEmailBrandingHeader,
+  buildEmailFromAddress,
+  buildEmailSignature,
+} from "./email-branding";
 
 export function isEmailConfigured(): boolean {
   return !!(
@@ -17,6 +22,8 @@ export async function sendInvoiceEmail(options: {
   orderNumber: string;
   total: string;
   pdfBuffer: Buffer;
+  companyName: string;
+  logoUrl?: string;
 }) {
   if (!isEmailConfigured()) {
     throw new Error(
@@ -38,17 +45,18 @@ export async function sendInvoiceEmail(options: {
     process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@khm-handmade.at";
 
   await transporter.sendMail({
-    from: `KHM <${from}>`,
+    from: buildEmailFromAddress(options.companyName, from),
     to: options.to,
-    subject: `Ihre Rechnung ${options.invoiceNumber} – KHM`,
+    subject: `Ihre Rechnung ${options.invoiceNumber} – ${options.companyName}`,
     html: `
+      ${buildEmailBrandingHeader({ companyName: options.companyName, logoUrl: options.logoUrl })}
       <p>${resolveDocumentSalutation(options.customerName, options.userId)}</p>
-      <p>vielen Dank für Ihren Einkauf bei Kevin's Handmade Manufactur.</p>
+      <p>vielen Dank für Ihren Einkauf bei ${options.companyName}.</p>
       <p>Bestellung: <strong>${options.orderNumber}</strong><br>
       Rechnung: <strong>${options.invoiceNumber}</strong><br>
       Betrag: <strong>${options.total}</strong></p>
       <p>Im Anhang finden Sie Ihre Rechnung als PDF.</p>
-      <p>Herzliche Grüße aus dem Schneebergland,<br>Ihr KHM-Team</p>
+      ${buildEmailSignature(options.companyName)}
     `,
     attachments: [
       {
@@ -73,6 +81,8 @@ export async function sendDunningEmail(options: {
   iban: string;
   bic: string;
   bankName: string;
+  companyName: string;
+  logoUrl?: string;
 }) {
   if (!isEmailConfigured()) {
     throw new Error(
@@ -101,10 +111,11 @@ export async function sendDunningEmail(options: {
         : "Bitte überweisen Sie den offenen Betrag zeitnah.";
 
   await transporter.sendMail({
-    from: `KHM <${from}>`,
+    from: buildEmailFromAddress(options.companyName, from),
     to: options.to,
-    subject: `${options.reminderLabel}: Rechnung ${options.invoiceNumber} – KHM`,
+    subject: `${options.reminderLabel}: Rechnung ${options.invoiceNumber} – ${options.companyName}`,
     html: `
+      ${buildEmailBrandingHeader({ companyName: options.companyName, logoUrl: options.logoUrl })}
       <p>${resolveDocumentSalutation(options.customerName, options.userId)}</p>
       <p><strong>${options.reminderLabel}</strong></p>
       <p>zu Ihrer Bestellung <strong>${options.orderNumber}</strong> ist die Rechnung
@@ -117,7 +128,7 @@ export async function sendDunningEmail(options: {
       BIC: ${options.bic}<br>
       Verwendungszweck: <strong>${options.invoiceNumber}</strong></p>
       <p>Bei Fragen erreichen Sie uns unter dieser E-Mail-Adresse.</p>
-      <p>Herzliche Grüße,<br>Ihr KHM-Team</p>
+      ${buildEmailSignature(options.companyName)}
     `,
   });
 }

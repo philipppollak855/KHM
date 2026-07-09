@@ -3,13 +3,17 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { Upload, X, Loader2, RefreshCw } from "lucide-react";
-import { uploadProductImage, uploadCategoryImage } from "@/lib/storage";
+import { uploadProductImage, uploadCategoryImage, uploadBrandingImage } from "@/lib/storage";
+
+type UploadFolder = "products" | "categories" | "branding";
 
 interface ImageUploadProps {
   value?: string;
   onChange: (url: string) => void;
-  folder?: "products" | "categories";
+  folder?: UploadFolder;
   label?: string;
+  hint?: string;
+  previewAspect?: "square" | "wide";
 }
 
 export default function ImageUpload({
@@ -17,6 +21,8 @@ export default function ImageUpload({
   onChange,
   folder = "products",
   label = "Produktbild",
+  hint,
+  previewAspect = "square",
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -29,7 +35,9 @@ export default function ImageUpload({
       const url =
         folder === "categories"
           ? await uploadCategoryImage(file)
-          : await uploadProductImage(file);
+          : folder === "branding"
+            ? await uploadBrandingImage(file)
+            : await uploadProductImage(file);
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload fehlgeschlagen");
@@ -38,14 +46,31 @@ export default function ImageUpload({
     }
   };
 
+  const previewClass =
+    previewAspect === "wide"
+      ? "relative w-full max-w-sm aspect-[3/1] rounded-xl overflow-hidden border-2 border-wood/20 bg-linen"
+      : "relative w-full max-w-xs aspect-square rounded-xl overflow-hidden border-2 border-wood/20";
+
+  const emptyClass =
+    previewAspect === "wide"
+      ? "w-full max-w-sm aspect-[3/1] rounded-xl border-2 border-dashed border-wood/30 bg-linen flex flex-col items-center justify-center gap-2 hover:border-forest hover:bg-forest/5 transition-colors disabled:opacity-50"
+      : "w-full max-w-xs aspect-square rounded-xl border-2 border-dashed border-wood/30 bg-linen flex flex-col items-center justify-center gap-2 hover:border-forest hover:bg-forest/5 transition-colors disabled:opacity-50";
+
   return (
     <div className="flex flex-col gap-3">
       <label className="text-sm font-medium text-wood-dark">{label}</label>
+      {hint && <p className="text-xs text-stone -mt-1">{hint}</p>}
 
       {value ? (
         <div className="space-y-3">
-          <div className="relative w-full max-w-xs aspect-square rounded-xl overflow-hidden border-2 border-wood/20">
-            <Image src={value} alt="Vorschau" fill className="object-cover" unoptimized={value.includes("firebasestorage")} />
+          <div className={previewClass}>
+            <Image
+              src={value}
+              alt="Vorschau"
+              fill
+              className={previewAspect === "wide" ? "object-contain p-2" : "object-cover"}
+              unoptimized={value.includes("firebasestorage")}
+            />
             <button
               type="button"
               onClick={() => onChange("")}
@@ -74,7 +99,7 @@ export default function ImageUpload({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="w-full max-w-xs aspect-square rounded-xl border-2 border-dashed border-wood/30 bg-linen flex flex-col items-center justify-center gap-2 hover:border-forest hover:bg-forest/5 transition-colors disabled:opacity-50"
+          className={emptyClass}
         >
           {uploading ? (
             <Loader2 className="w-8 h-8 text-forest animate-spin" />

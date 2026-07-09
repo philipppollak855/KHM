@@ -9,12 +9,15 @@ import { isStandalonePwa } from "@/lib/pwa-history";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layout/PageHeader";
+import CompanyLogo from "@/components/branding/CompanyLogo";
+import { useCompanyBranding } from "@/context/CompanyBrandingContext";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const explicitRedirect = searchParams.get("redirect");
   const { login, user, loading: authLoading } = useAuth();
+  const { company } = useCompanyBranding();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -54,7 +57,14 @@ function LoginForm() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-16">
-      <PageHeader label="Kundenbereich" title="Anmelden" description="Willkommen zurück bei KHM" />
+      <div className="flex justify-center mb-8">
+        <CompanyLogo variant="full" size="lg" />
+      </div>
+      <PageHeader
+        label="Kundenbereich"
+        title="Anmelden"
+        description={`Willkommen zurück bei ${company.name}`}
+      />
 
       <form onSubmit={handleSubmit} className="bg-linen border border-wood/10 p-8 space-y-4">
         <Input label="E-Mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />

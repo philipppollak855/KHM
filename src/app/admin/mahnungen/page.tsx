@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getInvoices, formatPrice, formatDate } from "@/lib/firestore";
 import { sendInvoiceReminder } from "@/lib/admin-api";
+import { getInvoiceListHref } from "@/lib/admin-invoice-filters";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import type { Invoice } from "@/lib/types";
 
@@ -54,14 +56,22 @@ export default function AdminDunningPage() {
       />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-        <div className="bg-cream border border-wood/10 p-4">
+        <Link
+          href={getInvoiceListHref("open")}
+          className="bg-cream border border-wood/10 p-4 rounded-lg hover:border-amber-300 hover:bg-amber-50/40 transition-colors"
+        >
           <p className="text-xs text-stone uppercase">Offene Rechnungen</p>
           <p className="text-2xl font-display">{invoices.length}</p>
-        </div>
-        <div className="bg-cream border border-wood/10 p-4">
+          <p className="text-[10px] text-stone mt-2">In Rechnungen anzeigen →</p>
+        </Link>
+        <Link
+          href={getInvoiceListHref("overdue")}
+          className="bg-cream border border-wood/10 p-4 rounded-lg hover:border-red-300 hover:bg-red-50/40 transition-colors"
+        >
           <p className="text-xs text-stone uppercase">Überfällig</p>
           <p className="text-2xl font-display text-red-700">{overdue.length}</p>
-        </div>
+          <p className="text-[10px] text-stone mt-2">In Rechnungen anzeigen →</p>
+        </Link>
       </div>
 
       {message && (

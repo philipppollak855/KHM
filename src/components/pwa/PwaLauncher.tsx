@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LogOut, Sparkles } from "lucide-react";
+import { Home, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSwipePages } from "@/hooks/useSwipePages";
+import PwaBottomNav from "@/components/pwa/PwaBottomNav";
+import CompanyLogo from "@/components/branding/CompanyLogo";
+import { useCompanyBranding } from "@/context/CompanyBrandingContext";
 import {
   getPwaGreeting,
   pwaLauncherPages,
@@ -51,6 +54,7 @@ function formatDate(date: Date) {
 
 export default function PwaLauncher() {
   const { logout } = useAuth();
+  const { company } = useCompanyBranding();
   const [now, setNow] = useState(() => new Date());
   const { scrollerRef, activePage, scrollToPage } = useSwipePages(
     pwaLauncherPages.length
@@ -62,29 +66,44 @@ export default function PwaLauncher() {
   }, []);
 
   return (
-    <div className="pwa-launcher min-h-dvh flex flex-col overflow-hidden text-cream select-none">
+    <div className="pwa-launcher min-h-dvh flex flex-col overflow-hidden text-cream select-none pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
       <div className="pwa-launcher-bg pointer-events-none" aria-hidden />
 
       <header className="relative z-10 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.35em] text-cream/45 mb-1">
-              KHM Verwaltung
-            </p>
+            <div className="flex items-center gap-3 mb-3">
+              <Link href="/" aria-label="Zur Homepage" title="Zur Homepage">
+                <CompanyLogo variant="mark" size="md" dark />
+              </Link>
+              <p className="text-[11px] uppercase tracking-[0.35em] text-cream/45">
+                {company.name}
+              </p>
+            </div>
             <h1 className="font-display text-3xl sm:text-4xl font-light tracking-tight text-cream">
               {getPwaGreeting(now)}
             </h1>
             <p className="text-sm text-cream/55 mt-1 capitalize">{formatDate(now)}</p>
           </div>
           <div className="text-right shrink-0 flex flex-col items-end gap-2">
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="p-2 rounded-xl bg-white/5 border border-white/10 text-cream/45 hover:text-cream hover:bg-white/10 transition-colors"
-              aria-label="Abmelden"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/"
+                className="p-2 rounded-xl bg-white/5 border border-white/10 text-cream/45 hover:text-cream hover:bg-white/10 transition-colors"
+                aria-label="Zur Homepage"
+                title="Zur Homepage"
+              >
+                <Home className="w-4 h-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="p-2 rounded-xl bg-white/5 border border-white/10 text-cream/45 hover:text-cream hover:bg-white/10 transition-colors"
+                aria-label="Abmelden"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
             <p className="font-display text-4xl sm:text-5xl font-light tabular-nums tracking-tight text-cream/95">
               {formatClock(now)}
             </p>
@@ -128,7 +147,7 @@ export default function PwaLauncher() {
           ))}
         </div>
 
-        <div className="relative z-10 flex flex-col items-center gap-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="relative z-10 flex flex-col items-center gap-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
             {pwaLauncherPages.map((page, index) => (
               <button
@@ -150,6 +169,8 @@ export default function PwaLauncher() {
           </p>
         </div>
       </div>
+
+      <PwaBottomNav />
     </div>
   );
 }

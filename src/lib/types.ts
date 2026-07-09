@@ -205,6 +205,10 @@ export interface CompanySettings {
   iban: string;
   bic: string;
   bankName: string;
+  /** Firmenlogo für Website, Dokumente, Admin */
+  logoUrl?: string;
+  /** Quadratisches App-Icon für PWA (empf. 512×512) */
+  pwaIconUrl?: string;
 }
 
 export interface OrderTotals {
