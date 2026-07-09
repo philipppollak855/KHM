@@ -45,7 +45,15 @@ export default function AdminOrdersPage() {
               <div>
                 <p className="font-semibold text-wood-dark text-lg">{order.orderNumber}</p>
                 <p className="text-sm text-stone">{order.customerName} · {order.customerEmail}</p>
-                <p className="text-sm text-stone">{formatDate(order.createdAt)}</p>
+                <p className="text-sm text-stone">
+                  {formatDate(order.createdAt)}
+                  {order.stockDeducted && (
+                    <span className="ml-2">· Lager ausgebucht</span>
+                  )}
+                  {order.stockRestocked && (
+                    <span className="text-green-700 ml-2">· Lager zurückgebucht</span>
+                  )}
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <select

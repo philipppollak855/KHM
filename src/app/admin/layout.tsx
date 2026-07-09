@@ -14,17 +14,21 @@ import {
   ArrowLeft,
   Truck,
   Settings,
+  Boxes,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const adminNav = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/bestellungen", icon: ShoppingCart, label: "Bestellungen" },
+  { href: "/admin/lager", icon: Boxes, label: "Lager" },
   { href: "/admin/produkte", icon: Package, label: "Produkte" },
   { href: "/admin/kategorien", icon: FolderTree, label: "Kategorien" },
-  { href: "/admin/bestellungen", icon: ShoppingCart, label: "Bestellungen" },
+  { href: "/admin/kunden", icon: Users, label: "Kunden" },
+  { href: "/admin/kontaktanfragen", icon: Mail, label: "Kontaktanfragen" },
   { href: "/admin/rechnungen", icon: FileText, label: "Rechnungen" },
   { href: "/admin/versand", icon: Truck, label: "Versand" },
-  { href: "/admin/kunden", icon: Users, label: "Kunden" },
   { href: "/admin/einstellungen", icon: Settings, label: "Einstellungen" },
 ];
 
@@ -64,7 +68,7 @@ export default function AdminLayout({
               key={href}
               href={href}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                pathname === href
+                pathname === href || (href !== "/admin" && pathname.startsWith(href))
                   ? "bg-forest text-cream"
                   : "text-cream/70 hover:bg-cream/10 hover:text-cream"
               }`}

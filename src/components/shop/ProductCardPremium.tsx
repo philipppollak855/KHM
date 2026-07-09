@@ -20,6 +20,7 @@ export default function ProductCardPremium({ product }: ProductCardPremiumProps)
       price: product.price,
       taxRate: product.taxRate ?? 20,
       imageUrl: product.imageUrl,
+      maxStock: product.stock,
     });
   };
 

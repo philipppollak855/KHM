@@ -21,6 +21,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       price: product.price,
       taxRate: product.taxRate ?? 20,
       imageUrl: product.imageUrl,
+      maxStock: product.stock,
     });
   };
 

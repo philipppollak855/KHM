@@ -25,10 +25,14 @@ import type {
   Address,
   ShippingZone,
   CompanySettings,
+  ContactInquiry,
+  ContactInquiryStatus,
+  StockMovement,
 } from "./types";
-import { buildOrderItemsFromCart, aggregateTaxBreakdown, roundCurrency } from "./pricing";
 import { DEFAULT_COMPANY } from "./company";
 import { DEFAULT_SHIPPING_ZONES } from "./shipping";
+import { validateCartStock, restockOrder } from "./inventory";
+import { auth } from "./firebase";
 import type { CartItem } from "./types";
 
 function toDate(value: unknown): Date {
@@ -215,71 +219,64 @@ export async function createOrder(data: {
   notes?: string;
   distanceKm?: number;
 }) {
-  const items = buildOrderItemsFromCart(data.cartItems);
-  const subtotalGross = roundCurrency(items.reduce((s, i) => s + i.grossAmount, 0));
-  const subtotalNet = roundCurrency(items.reduce((s, i) => s + i.netAmount, 0));
-  const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
-  const taxBreakdown = aggregateTaxBreakdown(items);
-  const total = roundCurrency(subtotalGross + data.shipping);
+  const stockCheck = await validateCartStock(
+    data.cartItems.map((i) => ({
+      productId: i.productId,
+      name: i.name,
+      quantity: i.quantity,
+    }))
+  );
+  if (!stockCheck.ok) {
+    throw new Error(stockCheck.error);
+  }
 
-  const orderNumber = `KHM-${Date.now().toString(36).toUpperCase()}`;
-  const orderRef = await addDoc(collection(db, "orders"), {
-    userId: data.userId,
-    customerName: data.customerName,
-    customerEmail: data.customerEmail,
-    items,
-    subtotalNet,
-    subtotalGross,
-    taxTotal,
-    shipping: data.shipping,
-    total,
-    orderNumber,
-    status: "confirmed",
-    shippingAddress: data.shippingAddress,
-    notes: data.notes || null,
-    distanceKm: data.distanceKm || null,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) {
+    throw new Error("Nicht angemeldet.");
+  }
+
+  const res = await fetch("/api/orders", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
   });
 
-  const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}`;
-  const invoiceRef = await addDoc(collection(db, "invoices"), {
-    invoiceNumber,
-    orderId: orderRef.id,
-    orderNumber,
-    userId: data.userId,
-    customerName: data.customerName,
-    customerEmail: data.customerEmail,
-    items,
-    subtotalNet,
-    subtotalGross,
-    taxTotal,
-    taxBreakdown,
-    shipping: data.shipping,
-    total,
-    status: "sent",
-    shippingAddress: data.shippingAddress,
-    issuedAt: serverTimestamp(),
-    dueAt: Timestamp.fromDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)),
-  });
+  const payload = await res.json().catch(() => ({}));
 
-  await updateDoc(orderRef, { invoiceId: invoiceRef.id });
+  if (!res.ok) {
+    throw new Error(payload.error || "Bestellung fehlgeschlagen.");
+  }
 
-  return { orderId: orderRef.id, orderNumber, invoiceId: invoiceRef.id };
+  return payload as { orderId: string; orderNumber: string; invoiceId: string };
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]) {
+  const order = await getOrder(id);
+  if (!order) throw new Error("Bestellung nicht gefunden.");
+
   const updates: Record<string, unknown> = {
     status,
     updatedAt: serverTimestamp(),
   };
 
-  if (status === "shipped") {
-    const order = await getOrder(id);
-    if (order && !order.deliveryNoteId) {
-      const noteRef = await createDeliveryNote(order);
-      updates.deliveryNoteId = noteRef.id;
-    }
+  if (
+    status === "cancelled" &&
+    order.status !== "cancelled" &&
+    order.stockDeducted &&
+    !order.stockRestocked
+  ) {
+    const adminUser = auth.currentUser;
+    if (!adminUser) throw new Error("Nur Admins können Bestellungen stornieren.");
+    await restockOrder(id, order.orderNumber, order.items, adminUser.uid);
+    updates.stockRestocked = true;
+  }
+
+  if (status === "shipped" && !order.deliveryNoteId) {
+    const noteRef = await createDeliveryNote(order);
+    updates.deliveryNoteId = noteRef.id;
   }
 
   return updateDoc(doc(db, "orders", id), updates);
@@ -406,6 +403,84 @@ export async function getUser(id: string): Promise<User | null> {
     ...snap.data(),
     createdAt: toDate(snap.data().createdAt),
   } as User;
+}
+
+// ─── Contact Inquiries ────────────────────────────────────────
+
+function mapContactInquiry(d: {
+  id: string;
+  data: () => Record<string, unknown>;
+}): ContactInquiry {
+  const data = d.data();
+  return {
+    id: d.id,
+    name: data.name as string,
+    email: data.email as string,
+    subject: data.subject as string,
+    message: data.message as string,
+    status: (data.status as ContactInquiryStatus) || "new",
+    createdAt: toDate(data.createdAt),
+  };
+}
+
+export async function createContactInquiry(data: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}) {
+  return addDoc(collection(db, "contactInquiries"), {
+    name: data.name.trim(),
+    email: data.email.trim(),
+    subject: data.subject.trim(),
+    message: data.message.trim(),
+    status: "new",
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function getContactInquiries(): Promise<ContactInquiry[]> {
+  const q = query(
+    collection(db, "contactInquiries"),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) =>
+    mapContactInquiry({ id: d.id, data: () => d.data() })
+  );
+}
+
+export async function updateContactInquiryStatus(
+  id: string,
+  status: ContactInquiryStatus
+) {
+  return updateDoc(doc(db, "contactInquiries", id), { status });
+}
+
+// ─── Stock Movements ──────────────────────────────────────────
+
+export async function getStockMovements(limit = 50): Promise<StockMovement[]> {
+  const q = query(
+    collection(db, "stockMovements"),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.slice(0, limit).map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      productId: data.productId as string,
+      productName: data.productName as string,
+      delta: data.delta as number,
+      stockAfter: data.stockAfter as number,
+      reason: data.reason as StockMovement["reason"],
+      orderId: data.orderId as string | undefined,
+      orderNumber: data.orderNumber as string | undefined,
+      note: data.note as string | undefined,
+      createdBy: data.createdBy as string,
+      createdAt: toDate(data.createdAt),
+    };
+  });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────

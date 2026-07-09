@@ -50,15 +50,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = (item: Omit<CartItem, "quantity">, quantity = 1) => {
     setItems((prev) => {
+      const maxStock = item.maxStock;
       const existing = prev.find((i) => i.productId === item.productId);
       if (existing) {
+        const nextQty = existing.quantity + quantity;
+        const capped =
+          maxStock !== undefined ? Math.min(nextQty, maxStock) : nextQty;
+        if (capped <= 0) return prev;
         return prev.map((i) =>
           i.productId === item.productId
-            ? { ...i, quantity: i.quantity + quantity }
+            ? { ...i, quantity: capped, maxStock: maxStock ?? i.maxStock }
             : i
         );
       }
-      return [...prev, { ...item, quantity }];
+      const capped =
+        maxStock !== undefined ? Math.min(quantity, maxStock) : quantity;
+      if (capped <= 0) return prev;
+      return [...prev, { ...item, quantity: capped }];
     });
   };
 
@@ -72,7 +80,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.productId === productId ? { ...i, quantity } : i))
+      prev.map((i) => {
+        if (i.productId !== productId) return i;
+        const capped =
+          i.maxStock !== undefined ? Math.min(quantity, i.maxStock) : quantity;
+        return { ...i, quantity: capped };
+      })
     );
   };
 

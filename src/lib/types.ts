@@ -55,6 +55,7 @@ export interface CartItem {
   quantity: number;
   taxRate: number;
   imageUrl?: string;
+  maxStock?: number;
 }
 
 export type OrderStatus =
@@ -101,6 +102,8 @@ export interface Order {
   invoiceId?: string;
   deliveryNoteId?: string;
   distanceKm?: number;
+  stockDeducted?: boolean;
+  stockRestocked?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -182,3 +185,39 @@ export interface OrderTotals {
   shipping: number;
   total: number;
 }
+
+export type StockMovementReason =
+  | "order"
+  | "cancel"
+  | "inbound"
+  | "outbound"
+  | "correction"
+  | "reorder";
+
+export interface StockMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  delta: number;
+  stockAfter: number;
+  reason: StockMovementReason;
+  orderId?: string;
+  orderNumber?: string;
+  note?: string;
+  createdBy: string;
+  createdAt: Date;
+}
+
+export type ContactInquiryStatus = "new" | "read" | "replied" | "archived";
+
+export interface ContactInquiry {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: ContactInquiryStatus;
+  createdAt: Date;
+}
+
+export const LOW_STOCK_THRESHOLD = 5;

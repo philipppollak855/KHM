@@ -101,8 +101,12 @@ export default function CheckoutPage() {
       router.push(
         `/konto/bestellungen?success=1&orderId=${result.orderId}&orderNumber=${result.orderNumber}`
       );
-    } catch {
-      setError("Bestellung fehlgeschlagen. Bitte versuchen Sie es erneut.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Bestellung fehlgeschlagen. Bitte versuchen Sie es erneut."
+      );
     } finally {
       setSubmitting(false);
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, PackageMinus } from "lucide-react";
 import {
   getProducts,
   getCategories,
@@ -11,6 +11,9 @@ import {
   slugify,
   formatPrice,
 } from "@/lib/firestore";
+import { adjustProductStock } from "@/lib/inventory";
+import { useAuth } from "@/context/AuthContext";
+import StockInboundButton from "@/components/admin/StockInboundButton";
 import type { Product, Category } from "@/lib/types";
 import { calculateSellingPrice, TAX_RATES_AT } from "@/lib/pricing";
 import Button from "@/components/ui/Button";
@@ -35,11 +38,13 @@ const emptyProduct = {
 };
 
 export default function AdminProductsPage() {
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyProduct);
+  const [stockAdjust, setStockAdjust] = useState<Record<string, string>>({});
 
   const load = async () => {
     const [prods, cats] = await Promise.all([getProducts(), getCategories()]);
@@ -115,6 +120,28 @@ export default function AdminProductsPage() {
       await deleteProduct(id);
       await load();
     }
+  };
+
+  const handleStockAdjust = async (
+    productId: string,
+    productName: string,
+    direction: "outbound"
+  ) => {
+    if (!user) return;
+    const qty = parseInt(stockAdjust[productId] || "0", 10);
+    if (!qty || qty <= 0) {
+      alert("Bitte eine gültige Menge eingeben.");
+      return;
+    }
+    await adjustProductStock(
+      productId,
+      -qty,
+      direction,
+      user.id,
+      `Manuelle Ausbuchung: ${productName}`
+    );
+    setStockAdjust((prev) => ({ ...prev, [productId]: "" }));
+    await load();
   };
 
   return (
@@ -289,7 +316,40 @@ export default function AdminProductsPage() {
               <tr key={p.id} className="border-t border-wood/10">
                 <td className="p-4 font-medium">{p.name}</td>
                 <td className="p-4">{formatPrice(p.price)}</td>
-                <td className="p-4">{p.stock}</td>
+                <td className="p-4">
+                  <div className="flex flex-col gap-2 min-w-[200px]">
+                    <span className={`font-medium ${p.stock <= 0 ? "text-red-600" : ""}`}>
+                      {p.stock} Stück
+                    </span>
+                    <StockInboundButton
+                      productId={p.id}
+                      productName={p.name}
+                      label="Nachbestellen"
+                      onSuccess={load}
+                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="Menge"
+                        value={stockAdjust[p.id] || ""}
+                        onChange={(e) =>
+                          setStockAdjust((prev) => ({ ...prev, [p.id]: e.target.value }))
+                        }
+                        className="w-16 rounded border border-wood/20 bg-linen px-2 py-1 text-xs"
+                      />
+                      <button
+                        type="button"
+                        title="Ausbuchen"
+                        onClick={() => handleStockAdjust(p.id, p.name, "outbound")}
+                        className="text-xs text-red-600 hover:underline flex items-center gap-1"
+                      >
+                        <PackageMinus className="w-3 h-3" />
+                        Ausbuchen
+                      </button>
+                    </div>
+                  </div>
+                </td>
                 <td className="p-4">{p.taxRate ?? 20} %</td>
                 <td className="p-4">
                   <span
