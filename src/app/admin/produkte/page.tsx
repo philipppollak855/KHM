@@ -226,7 +226,7 @@ export default function AdminProductsPage() {
         onSubmit={handleSubmit}
       />
 
-      <div className="lg:hidden space-y-3">
+      <div className="lg:hidden space-y-3 pb-1">
         {filteredProducts.map((p) => (
           <article
             key={p.id}
@@ -411,6 +411,7 @@ export default function AdminProductsPage() {
                 </td>
                 <td className="p-4 text-right">
                   <button
+                    type="button"
                     onClick={() => handleEdit(p)}
                     className="p-1.5 hover:bg-wood/10 rounded"
                   >

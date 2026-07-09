@@ -15,7 +15,10 @@ import {
   getActiveNavHubId,
   isNavLinkActive,
 } from "@/lib/admin-nav";
-import { PWA_MOBILE_NAV_MQ } from "@/lib/pwa-layout";
+import {
+  PWA_BOTTOM_NAV_INSET_BUFFER_PX,
+  PWA_MOBILE_NAV_MQ,
+} from "@/lib/pwa-layout";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import { getModuleForPath } from "@/lib/permissions";
 import { useAuth } from "@/context/AuthContext";
@@ -163,7 +166,8 @@ export default function PwaBottomNav() {
         root.style.setProperty("--pwa-bottom-nav", "0px");
         return;
       }
-      const height = Math.ceil(el.getBoundingClientRect().height);
+      const height =
+        Math.ceil(el.getBoundingClientRect().height) + PWA_BOTTOM_NAV_INSET_BUFFER_PX;
       root.style.setProperty("--pwa-bottom-nav", `${height}px`);
     };
 

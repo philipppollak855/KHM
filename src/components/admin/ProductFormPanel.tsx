@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   FileText,
@@ -58,11 +59,11 @@ export const emptyProductForm: ProductFormState = {
 
 type TabId = "basics" | "pricing" | "media" | "variants";
 
-const tabs: { id: TabId; label: string; icon: typeof FileText }[] = [
-  { id: "basics", label: "Grundlagen", icon: FileText },
-  { id: "pricing", label: "Preis & Lager", icon: CircleDollarSign },
-  { id: "media", label: "Bilder", icon: Images },
-  { id: "variants", label: "Varianten", icon: Layers },
+const tabs: { id: TabId; label: string; shortLabel: string; icon: typeof FileText }[] = [
+  { id: "basics", label: "Grundlagen", shortLabel: "Basis", icon: FileText },
+  { id: "pricing", label: "Preis & Lager", shortLabel: "Preis", icon: CircleDollarSign },
+  { id: "media", label: "Bilder", shortLabel: "Bilder", icon: Images },
+  { id: "variants", label: "Varianten", shortLabel: "Varianten", icon: Layers },
 ];
 
 interface ProductFormPanelProps {
@@ -87,6 +88,11 @@ export default function ProductFormPanel({
   onSubmit,
 }: ProductFormPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("basics");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -111,27 +117,36 @@ export default function ProductFormPanel({
     return calculateSellingPrice(cost, markupPercent, markupFixed);
   }, [form.costPrice, form.markupPercent, form.markupFixed, form.priceMode]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const set = (patch: Partial<ProductFormState>) => onChange({ ...form, ...patch });
   const variantsLocked = form.hasVariants && form.variants.length > 0;
 
-  return (
-    <div className="fixed inset-0 z-[60] flex justify-end">
+  const panel = (
+    <div className="fixed inset-0 z-[70] flex flex-col justify-end lg:flex-row lg:justify-end">
       <button
         type="button"
-        className="absolute inset-0 bg-wood-dark/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-wood-dark/55 backdrop-blur-[2px]"
         aria-label="Produktformular schließen"
         onClick={() => !saving && onClose()}
       />
 
       <aside
-        className="relative flex h-full max-h-dvh w-full max-w-2xl flex-col bg-cream shadow-2xl"
+        className="relative flex w-full max-h-[min(92dvh,100dvh)] flex-col overflow-hidden rounded-t-[1.35rem] bg-cream shadow-[0_-16px_48px_rgba(0,0,0,0.28)] mb-pwa-nav lg:mb-0 lg:h-full lg:max-h-dvh lg:max-w-2xl lg:rounded-none lg:rounded-l-[1.35rem] lg:shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="product-form-title"
       >
-        <header className="shrink-0 border-b border-wood/10 bg-linen px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div
+          className="shrink-0 border-b border-wood/10 bg-linen px-4 pb-3 pt-2 lg:py-4 lg:pt-[max(1rem,env(safe-area-inset-top))]"
+        >
+          <div
+            className="mb-2 flex justify-center lg:hidden"
+            aria-hidden
+          >
+            <div className="h-1 w-10 rounded-full bg-wood/25" />
+          </div>
+
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
               <p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-stone">
@@ -139,7 +154,7 @@ export default function ProductFormPanel({
               </p>
               <h2
                 id="product-form-title"
-                className="truncate font-display text-xl font-light text-wood-dark"
+                className="truncate font-display text-lg font-light text-wood-dark sm:text-xl"
               >
                 {form.name.trim() || "Ohne Titel"}
               </h2>
@@ -156,26 +171,27 @@ export default function ProductFormPanel({
           </div>
 
           <nav
-            className="mt-4 flex gap-1 overflow-x-auto scrollbar-none -mx-1 px-1"
+            className="mt-3 grid grid-cols-4 gap-1 lg:mt-4 lg:flex lg:overflow-x-auto lg:scrollbar-none lg:-mx-1 lg:px-1"
             aria-label="Produktbereiche"
           >
-            {tabs.map(({ id, label, icon: Icon }) => (
+            {tabs.map(({ id, label, shortLabel, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setActiveTab(id)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                className={`inline-flex flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-[10px] font-medium transition-colors lg:inline-flex lg:flex-row lg:gap-1.5 lg:px-3 lg:py-2 lg:text-sm ${
                   activeTab === id
                     ? "bg-forest text-cream"
-                    : "text-wood-dark hover:bg-wood/8"
+                    : "bg-cream/80 text-wood-dark hover:bg-wood/8"
                 }`}
               >
-                <Icon className="h-4 w-4" strokeWidth={1.75} />
-                {label}
+                <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                <span className="truncate lg:hidden">{shortLabel}</span>
+                <span className="hidden lg:inline">{label}</span>
               </button>
             ))}
           </nav>
-        </header>
+        </div>
 
         <form
           onSubmit={(e) => {
@@ -185,8 +201,9 @@ export default function ProductFormPanel({
           className="flex min-h-0 flex-1 flex-col"
         >
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="mx-auto max-w-xl rounded-2xl border border-wood/10 bg-white/70 p-4 shadow-sm sm:p-5">
             {activeTab === "basics" && (
-              <div className="space-y-4 max-w-xl">
+              <div className="space-y-4">
                 <Input
                   label="Name"
                   value={form.name}
@@ -238,7 +255,7 @@ export default function ProductFormPanel({
             )}
 
             {activeTab === "pricing" && (
-              <div className="space-y-4 max-w-xl">
+              <div className="space-y-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-wood-dark">Preisberechnung</label>
                   <select
@@ -328,7 +345,7 @@ export default function ProductFormPanel({
             )}
 
             {activeTab === "media" && (
-              <div className="space-y-6 max-w-xl">
+              <div className="space-y-6">
                 <ImageUpload
                   value={form.imageUrl}
                   onChange={(url) => set({ imageUrl: url })}
@@ -345,7 +362,7 @@ export default function ProductFormPanel({
             )}
 
             {activeTab === "variants" && (
-              <div className="space-y-4 max-w-xl">
+              <div className="space-y-4">
                 <label className="flex items-center gap-2 text-sm font-medium text-wood-dark rounded-xl border border-wood/10 bg-linen/50 p-4">
                   <input
                     type="checkbox"
@@ -367,9 +384,10 @@ export default function ProductFormPanel({
                 )}
               </div>
             )}
+            </div>
           </div>
 
-          <footer className="shrink-0 border-t border-wood/10 bg-linen px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <footer className="shrink-0 border-t border-wood/10 bg-linen/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:py-4">
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button
                 type="button"
@@ -398,4 +416,6 @@ export default function ProductFormPanel({
       </aside>
     </div>
   );
+
+  return createPortal(panel, document.body);
 }

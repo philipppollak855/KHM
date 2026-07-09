@@ -231,10 +231,6 @@ html.pwa-standalone body {
 }
 
 @supports (-webkit-touch-callout: none) {
-  html.pwa-standalone .pwa-bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
   html.pwa-standalone input,
   html.pwa-standalone select,
   html.pwa-standalone textarea {
@@ -261,11 +257,11 @@ html.pwa-standalone body {
 
 /* Abstand für fixierte Bottom-Navigation (nur Mobil/PWA) */
 .pb-pwa-nav {
-  padding-bottom: calc(var(--pwa-bottom-nav, 0px) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--pwa-bottom-nav, 5.5rem);
 }
 
 .mb-pwa-nav {
-  margin-bottom: calc(var(--pwa-bottom-nav, 0px) + env(safe-area-inset-bottom, 0px));
+  margin-bottom: var(--pwa-bottom-nav, 5.5rem);
 }
 
 @media (min-width: 1024px) {
