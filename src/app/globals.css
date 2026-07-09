@@ -251,6 +251,7 @@ html.pwa-standalone body {
 .pwa-bottom-nav button {
   -webkit-user-select: none;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .pwa-bottom-nav a:focus-visible {

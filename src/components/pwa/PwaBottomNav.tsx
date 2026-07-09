@@ -72,43 +72,50 @@ const startTab: Tab = {
   isActive: (pathname) => pathname === "/admin/start",
 };
 
-function SideTabLink({ tab, pathname }: { tab: Tab; pathname: string }) {
+const tabBaseClass =
+  "box-border flex flex-col items-center justify-center gap-1 rounded-xl py-2 h-[3.25rem] max-h-[3.25rem] min-h-0 overflow-hidden touch-manipulation transition-colors";
+
+function NavTabLink({
+  tab,
+  pathname,
+  highlight = false,
+  className = "",
+  ariaLabel,
+}: {
+  tab: Tab;
+  pathname: string;
+  highlight?: boolean;
+  className?: string;
+  ariaLabel?: string;
+}) {
   const Icon = tab.icon;
   const active = tab.isActive(pathname);
+
+  let stateClass: string;
+  if (active) {
+    stateClass = highlight
+      ? "bg-forest text-cream shadow-[inset_0_0_0_1px_rgba(184,149,108,0.55)]"
+      : "bg-forest text-cream";
+  } else if (highlight) {
+    stateClass =
+      "text-wheat/90 bg-wheat/10 shadow-[inset_0_0_0_1px_rgba(184,149,108,0.28)] hover:bg-wheat/14 hover:text-wheat";
+  } else {
+    stateClass = "text-cream/55 hover:text-cream hover:bg-cream/5";
+  }
 
   return (
     <Link
       href={tab.href}
-      className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2 h-[3.25rem] touch-manipulation transition-colors ${
-        active
-          ? "bg-forest text-cream"
-          : "text-cream/55 hover:text-cream hover:bg-cream/5"
-      }`}
+      className={`${tabBaseClass} ${stateClass} ${className}`}
       aria-current={active ? "page" : undefined}
+      aria-label={ariaLabel}
     >
-      <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
-      <span className="text-[10px] font-medium leading-none">{tab.label}</span>
-    </Link>
-  );
-}
-
-function StartTabLink({ tab, pathname }: { tab: Tab; pathname: string }) {
-  const Icon = tab.icon;
-  const active = tab.isActive(pathname);
-
-  return (
-    <Link
-      href={tab.href}
-      className={`flex shrink-0 flex-col items-center justify-center gap-1 rounded-xl py-2 h-[3.25rem] w-[4.25rem] touch-manipulation transition-colors ${
-        active
-          ? "bg-forest text-cream ring-1 ring-inset ring-wheat/90"
-          : "bg-linen text-forest ring-1 ring-inset ring-wheat/75 hover:bg-linen/90"
-      }`}
-      aria-current={active ? "page" : undefined}
-      aria-label="Startbildschirm"
-    >
-      <Icon className="w-5 h-5" strokeWidth={active ? 2.25 : 2} />
-      <span className="text-[10px] font-semibold tracking-wide leading-none">
+      <Icon className="w-5 h-5 shrink-0" strokeWidth={active ? 2 : 1.75} />
+      <span
+        className={`text-[10px] leading-none ${
+          highlight ? "font-semibold" : "font-medium"
+        }`}
+      >
         {tab.label}
       </span>
     </Link>
@@ -183,20 +190,36 @@ export default function PwaBottomNav() {
     >
       <div className="mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-wood-dark/92 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)] p-1.5">
-          <div className="flex items-center gap-1">
+          <div className="flex items-stretch gap-1">
             <div className="flex flex-1 gap-1 min-w-0">
               {leftTabs.map((tab) => (
-                <SideTabLink key={tab.id} tab={tab} pathname={pathname} />
+                <NavTabLink
+                  key={tab.id}
+                  tab={tab}
+                  pathname={pathname}
+                  className="flex-1 min-w-0"
+                />
               ))}
             </div>
 
             {showStart && (
-              <StartTabLink tab={startTab} pathname={pathname} />
+              <NavTabLink
+                tab={startTab}
+                pathname={pathname}
+                highlight
+                className="w-[4.25rem] shrink-0"
+                ariaLabel="Startbildschirm"
+              />
             )}
 
             <div className="flex flex-1 gap-1 min-w-0">
               {rightTabs.map((tab) => (
-                <SideTabLink key={tab.id} tab={tab} pathname={pathname} />
+                <NavTabLink
+                  key={tab.id}
+                  tab={tab}
+                  pathname={pathname}
+                  className="flex-1 min-w-0"
+                />
               ))}
             </div>
           </div>
