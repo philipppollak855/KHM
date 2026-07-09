@@ -19,6 +19,7 @@ export default function ProfilPage() {
     street: "",
     zip: "",
     city: "",
+    country: "Österreich",
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,6 +36,7 @@ export default function ProfilPage() {
         street: user.address?.street || "",
         zip: user.address?.zip || "",
         city: user.address?.city || "",
+        country: user.address?.country || "Österreich",
       });
     }
   }, [user]);
@@ -52,7 +54,7 @@ export default function ProfilPage() {
           street: form.street,
           city: form.city,
           zip: form.zip,
-          country: "Österreich",
+          country: form.country,
         },
       });
       setMessage("Profil erfolgreich gespeichert.");
@@ -112,6 +114,11 @@ export default function ProfilPage() {
             onChange={(e) => setForm({ ...form, city: e.target.value })}
           />
         </div>
+        <Input
+          label="Land"
+          value={form.country}
+          onChange={(e) => setForm({ ...form, country: e.target.value })}
+        />
         {message && (
           <p className={`text-sm ${message.includes("Fehler") ? "text-red-600" : "text-green-600"}`}>
             {message}

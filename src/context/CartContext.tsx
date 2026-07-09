@@ -31,7 +31,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(CART_KEY);
     if (stored) {
       try {
-        setItems(JSON.parse(stored));
+        setItems(JSON.parse(stored).map((i: CartItem) => ({
+          ...i,
+          taxRate: i.taxRate ?? 20,
+        })));
       } catch {
         localStorage.removeItem(CART_KEY);
       }

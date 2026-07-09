@@ -15,6 +15,22 @@
         { "fieldPath": "categoryId", "order": "ASCENDING" },
         { "fieldPath": "active", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "invoices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "issuedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "deliveryNotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

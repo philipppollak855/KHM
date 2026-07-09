@@ -171,6 +171,7 @@ export async function seedSampleData(): Promise<{
       imageUrl: product.imageUrl,
       active: true,
       featured: product.featured,
+      taxRate: 20,
       createdAt: serverTimestamp(),
     });
     productCount++;

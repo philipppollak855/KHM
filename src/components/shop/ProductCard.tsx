@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Leaf } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatPrice } from "@/lib/firestore";
 import { useCart } from "@/context/CartContext";
@@ -19,12 +19,13 @@ export default function ProductCard({ product }: ProductCardProps) {
       productId: product.id,
       name: product.name,
       price: product.price,
+      taxRate: product.taxRate ?? 20,
       imageUrl: product.imageUrl,
     });
   };
 
   return (
-    <div className="group bg-cream rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-wood/10">
+    <div className="group bg-linen overflow-hidden border border-wood/10 hover:border-forest/20 transition-all duration-300">
       <div className="relative aspect-square bg-wood/5 overflow-hidden">
         {product.imageUrl ? (
           <Image
@@ -34,8 +35,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-wood/10 to-forest/10">
-            <span className="text-6xl">🌲</span>
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-linen-dark to-cream-dark">
+            <Leaf className="w-12 h-12 text-forest/30" strokeWidth={1} />
           </div>
         )}
         {product.featured && (
@@ -46,12 +47,11 @@ export default function ProductCard({ product }: ProductCardProps) {
       </div>
 
       <div className="p-5">
-        <h3 className="font-display text-lg font-semibold text-wood-dark mb-1">
+        <h3 className="font-display text-lg font-light text-wood-dark mb-1">
           {product.name}
         </h3>
-        <p className="text-sm text-wood/60 mb-3 line-clamp-2">
-          {product.description}
-        </p>
+        <p className="text-sm text-stone mb-1 line-clamp-2">{product.description}</p>
+        <p className="text-xs text-stone/70 mb-3">inkl. {product.taxRate ?? 20} % USt.</p>
         <div className="flex items-center justify-between">
           <span className="text-xl font-bold text-forest">
             {formatPrice(product.price)}

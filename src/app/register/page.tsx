@@ -6,16 +6,12 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirm: "",
-  });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -43,55 +39,22 @@ export default function RegisterPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-16">
-      <div className="text-center mb-8">
-        <h1 className="font-display text-3xl font-bold text-wood-dark mb-2">
-          Registrieren
-        </h1>
-        <p className="text-wood/60">Werden Sie Teil der KHM-Familie</p>
-      </div>
+      <PageHeader label="Kundenbereich" title="Registrieren" description="Werden Sie Teil der KHM-Familie" />
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-cream rounded-2xl p-8 border border-wood/10 shadow-md space-y-4"
-      >
-        <Input
-          label="Name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          required
-        />
-        <Input
-          label="E-Mail"
-          type="email"
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          required
-        />
-        <Input
-          label="Passwort"
-          type="password"
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          required
-        />
-        <Input
-          label="Passwort bestätigen"
-          type="password"
-          value={form.confirm}
-          onChange={(e) => setForm({ ...form, confirm: e.target.value })}
-          required
-        />
+      <form onSubmit={handleSubmit} className="bg-linen border border-wood/10 p-8 space-y-4">
+        <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+        <Input label="E-Mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        <Input label="Passwort" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+        <Input label="Passwort bestätigen" type="password" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} required />
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Registrieren..." : "Konto erstellen"}
         </Button>
       </form>
 
-      <p className="text-center mt-6 text-sm text-wood/60">
+      <p className="text-center mt-6 text-sm text-stone">
         Bereits registriert?{" "}
-        <Link href="/login" className="text-forest font-medium hover:underline">
-          Anmelden
-        </Link>
+        <Link href="/login" className="text-forest hover:underline">Anmelden</Link>
       </p>
     </div>
   );

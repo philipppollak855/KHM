@@ -18,6 +18,7 @@ export default function ProductCardPremium({ product }: ProductCardPremiumProps)
       productId: product.id,
       name: product.name,
       price: product.price,
+      taxRate: product.taxRate ?? 20,
       imageUrl: product.imageUrl,
     });
   };

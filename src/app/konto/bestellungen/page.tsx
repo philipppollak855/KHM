@@ -6,7 +6,10 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getOrdersByUser, formatPrice, formatDate } from "@/lib/firestore";
+import { downloadOrderConfirmationPdf, downloadDeliveryNotePdf } from "@/lib/documents/download";
 import type { Order } from "@/lib/types";
+import PageHeader from "@/components/layout/PageHeader";
+import DownloadButton from "@/components/documents/DownloadButton";
 
 const statusLabels: Record<Order["status"], string> = {
   pending: "Ausstehend",
@@ -17,19 +20,12 @@ const statusLabels: Record<Order["status"], string> = {
   cancelled: "Storniert",
 };
 
-const statusColors: Record<Order["status"], string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  processing: "bg-purple-100 text-purple-800",
-  shipped: "bg-indigo-100 text-indigo-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
-};
-
 function OrdersContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const success = searchParams.get("success");
+  const orderNumber = searchParams.get("orderNumber");
+  const newOrderId = searchParams.get("orderId");
   const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,67 +47,70 @@ function OrdersContent() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <Link
-        href="/konto"
-        className="inline-flex items-center gap-1 text-forest text-sm mb-6 hover:underline"
-      >
+      <Link href="/konto" className="inline-flex items-center gap-1 text-forest text-sm mb-6 hover:underline">
         <ArrowLeft className="w-4 h-4" /> Zurück zum Konto
       </Link>
 
-      <h1 className="font-display text-4xl font-bold text-wood-dark mb-8">
-        Meine Bestellungen
-      </h1>
+      <PageHeader label="Kundenbereich" title="Meine Bestellungen" />
 
       {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3 text-green-800">
-          <CheckCircle className="w-5 h-5 shrink-0" />
-          <p>Ihre Bestellung wurde erfolgreich aufgegeben. Vielen Dank!</p>
+        <div className="mb-8 p-5 bg-green-50 border border-green-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3 text-green-800">
+            <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium">Bestellung erfolgreich aufgegeben!</p>
+              {orderNumber && <p className="text-sm mt-1">Auftragsnummer: {orderNumber}</p>}
+              <p className="text-sm mt-1">Sie erhalten eine Auftragsbestätigung als PDF.</p>
+            </div>
+          </div>
+          {newOrderId && (
+            <DownloadButton
+              label="Auftragsbestätigung PDF"
+              onClick={() => downloadOrderConfirmationPdf(newOrderId)}
+            />
+          )}
         </div>
       )}
 
       {loading ? (
-        <p className="text-wood/60">Laden...</p>
+        <p className="text-stone">Laden...</p>
       ) : orders.length > 0 ? (
         <div className="space-y-4">
           {orders.map((order) => (
-            <div
-              key={order.id}
-              className="p-6 bg-cream rounded-2xl border border-wood/10 shadow-sm"
-            >
+            <div key={order.id} className="p-6 bg-linen border border-wood/10">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                 <div>
-                  <p className="font-semibold text-wood-dark">
-                    {order.orderNumber}
-                  </p>
-                  <p className="text-sm text-wood/60">
-                    {formatDate(order.createdAt)}
-                  </p>
+                  <p className="font-display text-lg text-wood-dark">{order.orderNumber}</p>
+                  <p className="text-sm text-stone">{formatDate(order.createdAt)}</p>
                 </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}
-                >
-                  {statusLabels[order.status]}
-                </span>
+                <span className="text-sm text-forest font-medium">{statusLabels[order.status]}</span>
               </div>
-              <div className="space-y-1 mb-4">
+              <div className="space-y-1 mb-4 text-sm text-stone">
                 {order.items.map((item, i) => (
-                  <p key={i} className="text-sm text-wood/70">
-                    {item.quantity}× {item.name} – {formatPrice(item.price * item.quantity)}
-                  </p>
+                  <p key={i}>{item.quantity}× {item.name} – {formatPrice(item.grossAmount)}</p>
                 ))}
               </div>
-              <p className="font-bold text-forest text-lg">
-                Gesamt: {formatPrice(order.total)}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-wood/10">
+                <p className="font-semibold text-wood-dark">Gesamt: {formatPrice(order.total)}</p>
+                <div className="flex gap-2">
+                  <DownloadButton label="Auftragsbestätigung" onClick={() => downloadOrderConfirmationPdf(order.id)} />
+                  {order.deliveryNoteId && (
+                    <DownloadButton label="Lieferschein" onClick={() => downloadDeliveryNotePdf(order.deliveryNoteId!)} />
+                  )}
+                  {order.invoiceId && (
+                    <Link href="/konto/rechnungen" className="text-sm text-forest hover:underline self-center">
+                      Zur Rechnung →
+                    </Link>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-wood/60 mb-4">Noch keine Bestellungen vorhanden.</p>
-          <Link href="/shop" className="text-forest font-medium hover:underline">
-            Zum Shop
-          </Link>
+          <p className="text-stone mb-4">Noch keine Bestellungen.</p>
+          <Link href="/shop" className="text-forest hover:underline">Zur Kollektion</Link>
         </div>
       )}
     </div>

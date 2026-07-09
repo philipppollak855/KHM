@@ -27,12 +27,19 @@ export interface Category {
   active: boolean;
 }
 
+export type PriceMode = "manual" | "calculated";
+
 export interface Product {
   id: string;
   name: string;
   slug: string;
   description: string;
   price: number;
+  costPrice?: number;
+  markupPercent?: number;
+  markupFixed?: number;
+  priceMode?: PriceMode;
+  taxRate: number;
   categoryId: string;
   imageUrl?: string;
   stock: number;
@@ -46,6 +53,7 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  taxRate: number;
   imageUrl?: string;
 }
 
@@ -62,6 +70,17 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  taxRate: number;
+  netAmount: number;
+  taxAmount: number;
+  grossAmount: number;
+}
+
+export interface TaxBreakdownLine {
+  rate: number;
+  net: number;
+  tax: number;
+  gross: number;
 }
 
 export interface Order {
@@ -71,12 +90,17 @@ export interface Order {
   customerName: string;
   customerEmail: string;
   items: OrderItem[];
-  subtotal: number;
+  subtotalNet: number;
+  subtotalGross: number;
+  taxTotal: number;
   shipping: number;
   total: number;
   status: OrderStatus;
   shippingAddress: Address;
   notes?: string;
+  invoiceId?: string;
+  deliveryNoteId?: string;
+  distanceKm?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,15 +111,74 @@ export interface Invoice {
   id: string;
   invoiceNumber: string;
   orderId: string;
+  orderNumber: string;
   userId: string;
   customerName: string;
   customerEmail: string;
   items: OrderItem[];
-  subtotal: number;
-  tax: number;
+  subtotalNet: number;
+  subtotalGross: number;
+  taxTotal: number;
+  taxBreakdown: TaxBreakdownLine[];
+  shipping: number;
   total: number;
   status: InvoiceStatus;
+  shippingAddress: Address;
   issuedAt: Date;
   dueAt: Date;
   paidAt?: Date;
+}
+
+export interface DeliveryNote {
+  id: string;
+  deliveryNoteNumber: string;
+  orderId: string;
+  orderNumber: string;
+  userId: string;
+  customerName: string;
+  customerEmail: string;
+  items: OrderItem[];
+  shippingAddress: Address;
+  createdAt: Date;
+}
+
+export interface ShippingZone {
+  id: string;
+  name: string;
+  countries: string[];
+  zipPrefixes?: string[];
+  zipFrom?: string;
+  zipTo?: string;
+  baseCost: number;
+  freeFrom?: number;
+  costPerKm?: number;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface CompanySettings {
+  name: string;
+  tagline: string;
+  street: string;
+  zip: string;
+  city: string;
+  country: string;
+  email: string;
+  phone: string;
+  website: string;
+  uid: string;
+  firmenbuch?: string;
+  iban: string;
+  bic: string;
+  bankName: string;
+}
+
+export interface OrderTotals {
+  items: OrderItem[];
+  subtotalNet: number;
+  subtotalGross: number;
+  taxTotal: number;
+  taxBreakdown: TaxBreakdownLine[];
+  shipping: number;
+  total: number;
 }

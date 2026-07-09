@@ -1,28 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Minus, Plus, Trash2, ArrowRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { formatPrice } from "@/lib/firestore";
+import { useOrderCalculation } from "@/hooks/useOrderCalculation";
 import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import PageHeader from "@/components/layout/PageHeader";
+import OrderSummary from "@/components/shop/OrderSummary";
+import { formatPrice } from "@/lib/firestore";
+import { COUNTRIES } from "@/lib/shipping";
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, totalPrice } = useCart();
-  const shipping = totalPrice > 50 ? 0 : 4.9;
-  const total = totalPrice + shipping;
+  const { items, updateQuantity, removeItem } = useCart();
+  const [country, setCountry] = useState("Österreich");
+  const [zip, setZip] = useState("");
+
+  const { totals, loading } = useOrderCalculation(items, country, zip);
 
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <span className="text-6xl mb-4 block">🛒</span>
-        <h1 className="font-display text-3xl font-bold text-wood-dark mb-4">
-          Ihr Warenkorb ist leer
-        </h1>
-        <p className="text-wood/60 mb-8">
-          Entdecken Sie unsere handgemachten Produkte im Shop.
-        </p>
+        <PageHeader title="Ihr Warenkorb ist leer" description="Entdecken Sie unsere handgemachte Kollektion." />
         <Link href="/shop">
-          <Button>Zum Shop</Button>
+          <Button>Zur Kollektion</Button>
         </Link>
       </div>
     );
@@ -30,83 +32,65 @@ export default function CartPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="font-display text-4xl font-bold text-wood-dark mb-8">
-        Warenkorb
-      </h1>
+      <PageHeader label="Shop" title="Warenkorb" />
 
-      <div className="space-y-4 mb-8">
+      <div className="space-y-4 mb-10">
         {items.map((item) => (
           <div
             key={item.productId}
-            className="flex items-center gap-4 p-4 bg-cream rounded-xl border border-wood/10 shadow-sm"
+            className="flex items-center gap-4 p-5 bg-linen border border-wood/10"
           >
-            <div className="w-16 h-16 rounded-lg bg-wood/10 flex items-center justify-center text-2xl shrink-0">
-              {item.imageUrl ? "🖼️" : "🌲"}
+            <div className="w-16 h-16 bg-linen-dark flex items-center justify-center text-2xl shrink-0">
+              🌿
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-wood-dark truncate">
+              <h3 className="font-display text-lg font-light text-wood-dark truncate">
                 {item.name}
               </h3>
-              <p className="text-forest font-medium">
-                {formatPrice(item.price)}
+              <p className="text-sm text-stone">
+                {formatPrice(item.price)} · inkl. {item.taxRate ?? 20} % USt.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() =>
-                  updateQuantity(item.productId, item.quantity - 1)
-                }
-                className="p-1 rounded hover:bg-wood/10"
-              >
+              <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="p-1 hover:bg-wood/10">
                 <Minus className="w-4 h-4" />
               </button>
-              <span className="w-8 text-center font-medium">
-                {item.quantity}
-              </span>
-              <button
-                onClick={() =>
-                  updateQuantity(item.productId, item.quantity + 1)
-                }
-                className="p-1 rounded hover:bg-wood/10"
-              >
+              <span className="w-8 text-center">{item.quantity}</span>
+              <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="p-1 hover:bg-wood/10">
                 <Plus className="w-4 h-4" />
               </button>
             </div>
-            <p className="font-bold text-wood-dark w-20 text-right">
+            <p className="font-medium text-wood-dark w-20 text-right">
               {formatPrice(item.price * item.quantity)}
             </p>
-            <button
-              onClick={() => removeItem(item.productId)}
-              className="p-2 rounded hover:bg-red-50 text-red-600"
-            >
+            <button onClick={() => removeItem(item.productId)} className="p-2 text-red-600 hover:bg-red-50">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         ))}
       </div>
 
-      <div className="bg-cream-dark/50 rounded-xl p-6 border border-wood/10">
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-wood/70">
-            <span>Zwischensumme</span>
-            <span>{formatPrice(totalPrice)}</span>
-          </div>
-          <div className="flex justify-between text-wood/70">
-            <span>Versand</span>
-            <span>
-              {shipping === 0 ? "Kostenlos" : formatPrice(shipping)}
-            </span>
-          </div>
-          {totalPrice < 50 && (
-            <p className="text-xs text-moss">
-              Noch {formatPrice(50 - totalPrice)} bis zum kostenlosen Versand
-            </p>
-          )}
-          <div className="flex justify-between text-xl font-bold text-wood-dark pt-2 border-t border-wood/10">
-            <span>Gesamt</span>
-            <span>{formatPrice(total)}</span>
+      <div className="bg-linen-dark/40 border border-wood/10 p-6">
+        <p className="text-sm font-medium text-wood-dark mb-3">Versandvorschau</p>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Input label="PLZ" value={zip} onChange={(e) => setZip(e.target.value)} placeholder="z. B. 2734" />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-wood-dark">Land</label>
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-full rounded-lg border-2 border-wood/20 bg-linen px-4 py-2.5"
+            >
+              {COUNTRIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
           </div>
         </div>
+        {!loading && <OrderSummary totals={totals} showFreeShippingHint freeFrom={50} />}
+        <p className="text-xs text-stone mt-4 mb-6">
+          Endgültiger Versand wird an der Kasse nach PLZ und Region berechnet.
+        </p>
         <Link href="/checkout">
           <Button size="lg" className="w-full">
             Zur Kasse

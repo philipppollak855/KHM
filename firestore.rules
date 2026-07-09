@@ -7,7 +7,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
@@ -32,16 +32,35 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /shippingZones/{zoneId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /orders/{orderId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
     match /invoices/{invoiceId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow write: if isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /deliveryNotes/{noteId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

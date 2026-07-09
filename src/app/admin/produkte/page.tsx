@@ -12,6 +12,7 @@ import {
   formatPrice,
 } from "@/lib/firestore";
 import type { Product, Category } from "@/lib/types";
+import { calculateSellingPrice, TAX_RATES_AT } from "@/lib/pricing";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
@@ -21,6 +22,11 @@ const emptyProduct = {
   name: "",
   description: "",
   price: "",
+  costPrice: "",
+  markupPercent: "",
+  markupFixed: "",
+  priceMode: "manual" as "manual" | "calculated",
+  taxRate: "20",
   categoryId: "",
   stock: "",
   imageUrl: "",
@@ -47,11 +53,24 @@ export default function AdminProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cost = parseFloat(form.costPrice) || 0;
+    const markupPercent = parseFloat(form.markupPercent) || 0;
+    const markupFixed = parseFloat(form.markupFixed) || 0;
+    const price =
+      form.priceMode === "calculated" && cost > 0
+        ? calculateSellingPrice(cost, markupPercent, markupFixed)
+        : parseFloat(form.price);
+
     const data = {
       name: form.name,
       slug: slugify(form.name),
       description: form.description,
-      price: parseFloat(form.price),
+      price,
+      costPrice: cost || undefined,
+      markupPercent: markupPercent || undefined,
+      markupFixed: markupFixed || undefined,
+      priceMode: form.priceMode,
+      taxRate: parseFloat(form.taxRate) || 20,
       categoryId: form.categoryId,
       stock: parseInt(form.stock) || 0,
       imageUrl: form.imageUrl || undefined,
@@ -76,6 +95,11 @@ export default function AdminProductsPage() {
       name: product.name,
       description: product.description,
       price: product.price.toString(),
+      costPrice: product.costPrice?.toString() || "",
+      markupPercent: product.markupPercent?.toString() || "",
+      markupFixed: product.markupFixed?.toString() || "",
+      priceMode: product.priceMode || "manual",
+      taxRate: (product.taxRate ?? 20).toString(),
       categoryId: product.categoryId,
       stock: product.stock.toString(),
       imageUrl: product.imageUrl || "",
@@ -126,13 +150,58 @@ export default function AdminProductsPage() {
               required
             />
             <Input
-              label="Preis (€)"
+              label="Verkaufspreis (€, brutto)"
               type="number"
               step="0.01"
               value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-              required
+              onChange={(e) => setForm({ ...form, price: e.target.value, priceMode: "manual" })}
+              required={form.priceMode === "manual"}
+              disabled={form.priceMode === "calculated"}
             />
+            <Input
+              label="Einkaufspreis (€)"
+              type="number"
+              step="0.01"
+              value={form.costPrice}
+              onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
+            />
+            <Input
+              label="Aufschlag (%)"
+              type="number"
+              step="0.1"
+              value={form.markupPercent}
+              onChange={(e) => setForm({ ...form, markupPercent: e.target.value })}
+            />
+            <Input
+              label="Aufschlag (€ fest)"
+              type="number"
+              step="0.01"
+              value={form.markupFixed}
+              onChange={(e) => setForm({ ...form, markupFixed: e.target.value })}
+            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-wood-dark">Preisberechnung</label>
+              <select
+                value={form.priceMode}
+                onChange={(e) => setForm({ ...form, priceMode: e.target.value as "manual" | "calculated" })}
+                className="w-full rounded-lg border-2 border-wood/20 bg-cream px-4 py-2.5"
+              >
+                <option value="manual">Manueller Verkaufspreis</option>
+                <option value="calculated">Aus EK + Aufschlag berechnen</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-wood-dark">USt.-Satz</label>
+              <select
+                value={form.taxRate}
+                onChange={(e) => setForm({ ...form, taxRate: e.target.value })}
+                className="w-full rounded-lg border-2 border-wood/20 bg-cream px-4 py-2.5"
+              >
+                {TAX_RATES_AT.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-wood-dark">Kategorie</label>
               <select
@@ -210,6 +279,7 @@ export default function AdminProductsPage() {
               <th className="text-left p-4 font-medium text-wood-dark">Name</th>
               <th className="text-left p-4 font-medium text-wood-dark">Preis</th>
               <th className="text-left p-4 font-medium text-wood-dark">Lager</th>
+              <th className="text-left p-4 font-medium text-wood-dark">USt.</th>
               <th className="text-left p-4 font-medium text-wood-dark">Status</th>
               <th className="text-right p-4 font-medium text-wood-dark">Aktionen</th>
             </tr>
@@ -220,6 +290,7 @@ export default function AdminProductsPage() {
                 <td className="p-4 font-medium">{p.name}</td>
                 <td className="p-4">{formatPrice(p.price)}</td>
                 <td className="p-4">{p.stock}</td>
+                <td className="p-4">{p.taxRate ?? 20} %</td>
                 <td className="p-4">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs ${
@@ -249,7 +320,7 @@ export default function AdminProductsPage() {
             ))}
             {products.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-wood/60">
+                <td colSpan={7} className="p-8 text-center text-wood/60">
                   Noch keine Produkte vorhanden.
                 </td>
               </tr>

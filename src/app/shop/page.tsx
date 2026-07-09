@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ProductCard from "@/components/shop/ProductCard";
 import type { Category, Product } from "@/lib/types";
 import { getActiveCategories, getActiveProducts } from "@/lib/firestore";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default function ShopPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -35,14 +36,7 @@ export default function ShopPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-10">
-        <h1 className="font-display text-4xl font-bold text-wood-dark mb-2">
-          Unser Shop
-        </h1>
-        <p className="text-wood/60">
-          Handgemachte Produkte aus dem Schneebergland
-        </p>
-      </div>
+      <PageHeader label="Kollektion" title="Unser Shop" description="Handgemachte Unikate aus dem Schneebergland — alle Preise inkl. USt." />
 
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-10">

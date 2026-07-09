@@ -22,7 +22,7 @@ export default function Input({
       )}
       <input
         id={inputId}
-        className={`w-full rounded-lg border-2 border-wood/20 bg-cream px-4 py-2.5 text-wood-dark placeholder:text-wood/40 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/20 transition-colors ${className}`}
+        className={`w-full rounded-lg border-2 border-wood/20 bg-linen px-4 py-2.5 text-wood-dark placeholder:text-wood/40 focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/20 transition-colors ${className}`}
         {...props}
       />
       {error && <p className="text-sm text-red-600">{error}</p>}

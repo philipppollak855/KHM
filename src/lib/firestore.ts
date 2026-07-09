@@ -6,6 +6,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -18,10 +19,17 @@ import type {
   Product,
   Order,
   Invoice,
+  DeliveryNote,
   User,
   OrderItem,
   Address,
+  ShippingZone,
+  CompanySettings,
 } from "./types";
+import { buildOrderItemsFromCart, aggregateTaxBreakdown, roundCurrency } from "./pricing";
+import { DEFAULT_COMPANY } from "./company";
+import { DEFAULT_SHIPPING_ZONES } from "./shipping";
+import type { CartItem } from "./types";
 
 function toDate(value: unknown): Date {
   if (value instanceof Timestamp) return value.toDate();
@@ -29,7 +37,8 @@ function toDate(value: unknown): Date {
   return new Date();
 }
 
-// Categories
+// ─── Categories ───────────────────────────────────────────────
+
 export async function getCategories(): Promise<Category[]> {
   const q = query(collection(db, "categories"), orderBy("sortOrder"));
   const snap = await getDocs(q);
@@ -53,12 +62,14 @@ export async function deleteCategory(id: string) {
   return deleteDoc(doc(db, "categories", id));
 }
 
-// Products
+// ─── Products ─────────────────────────────────────────────────
+
 export async function getProducts(): Promise<Product[]> {
   const snap = await getDocs(collection(db, "products"));
   return snap.docs.map((d) => ({
     id: d.id,
     ...d.data(),
+    taxRate: d.data().taxRate ?? 20,
     createdAt: toDate(d.data().createdAt),
   })) as Product[];
 }
@@ -78,6 +89,7 @@ export async function getProductsByCategory(categoryId: string): Promise<Product
   return snap.docs.map((d) => ({
     id: d.id,
     ...d.data(),
+    taxRate: d.data().taxRate ?? 20,
     createdAt: toDate(d.data().createdAt),
   })) as Product[];
 }
@@ -88,6 +100,7 @@ export async function getProduct(id: string): Promise<Product | null> {
   return {
     id: snap.id,
     ...snap.data(),
+    taxRate: snap.data().taxRate ?? 20,
     createdAt: toDate(snap.data().createdAt),
   } as Product;
 }
@@ -95,6 +108,7 @@ export async function getProduct(id: string): Promise<Product | null> {
 export async function createProduct(data: Omit<Product, "id" | "createdAt">) {
   return addDoc(collection(db, "products"), {
     ...data,
+    taxRate: data.taxRate ?? 20,
     createdAt: serverTimestamp(),
   });
 }
@@ -107,16 +121,78 @@ export async function deleteProduct(id: string) {
   return deleteDoc(doc(db, "products", id));
 }
 
-// Orders
+// ─── Settings ─────────────────────────────────────────────────
+
+export async function getCompanySettings(): Promise<CompanySettings> {
+  const snap = await getDoc(doc(db, "settings", "company"));
+  if (!snap.exists()) return DEFAULT_COMPANY;
+  return { ...DEFAULT_COMPANY, ...snap.data() } as CompanySettings;
+}
+
+export async function saveCompanySettings(data: CompanySettings) {
+  return setDoc(doc(db, "settings", "company"), data, { merge: true });
+}
+
+export async function getShippingZones(): Promise<ShippingZone[]> {
+  const snap = await getDocs(
+    query(collection(db, "shippingZones"), orderBy("sortOrder"))
+  );
+  if (snap.empty) return DEFAULT_SHIPPING_ZONES.map((z, i) => ({
+    ...z,
+    id: `default-${i}`,
+  }));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShippingZone));
+}
+
+export async function createShippingZone(data: Omit<ShippingZone, "id">) {
+  return addDoc(collection(db, "shippingZones"), data);
+}
+
+export async function updateShippingZone(id: string, data: Partial<ShippingZone>) {
+  if (id.startsWith("default-")) {
+    return addDoc(collection(db, "shippingZones"), data);
+  }
+  return updateDoc(doc(db, "shippingZones", id), data);
+}
+
+export async function deleteShippingZone(id: string) {
+  if (id.startsWith("default-")) return;
+  return deleteDoc(doc(db, "shippingZones", id));
+}
+
+export async function seedShippingZones() {
+  const existing = await getDocs(collection(db, "shippingZones"));
+  if (!existing.empty) return;
+  for (const zone of DEFAULT_SHIPPING_ZONES) {
+    await addDoc(collection(db, "shippingZones"), zone);
+  }
+}
+
+// ─── Orders ───────────────────────────────────────────────────
+
+function mapOrder(d: { id: string; data: () => Record<string, unknown> }): Order {
+  const data = d.data();
+  return {
+    id: d.id,
+    ...data,
+    subtotalNet: (data.subtotalNet as number) ?? (data.subtotal as number) ?? 0,
+    subtotalGross: (data.subtotalGross as number) ?? (data.subtotal as number) ?? 0,
+    taxTotal: (data.taxTotal as number) ?? (data.tax as number) ?? 0,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  } as Order;
+}
+
 export async function getOrders(): Promise<Order[]> {
   const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-    createdAt: toDate(d.data().createdAt),
-    updatedAt: toDate(d.data().updatedAt),
-  })) as Order[];
+  return snap.docs.map(mapOrder);
+}
+
+export async function getOrder(id: string): Promise<Order | null> {
+  const snap = await getDoc(doc(db, "orders", id));
+  if (!snap.exists()) return null;
+  return mapOrder({ id: snap.id, data: () => snap.data() });
 }
 
 export async function getOrdersByUser(userId: string): Promise<Order[]> {
@@ -126,71 +202,135 @@ export async function getOrdersByUser(userId: string): Promise<Order[]> {
     orderBy("createdAt", "desc")
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-    createdAt: toDate(d.data().createdAt),
-    updatedAt: toDate(d.data().updatedAt),
-  })) as Order[];
+  return snap.docs.map(mapOrder);
 }
 
 export async function createOrder(data: {
   userId: string;
   customerName: string;
   customerEmail: string;
-  items: OrderItem[];
-  subtotal: number;
+  cartItems: CartItem[];
   shipping: number;
-  total: number;
   shippingAddress: Address;
   notes?: string;
+  distanceKm?: number;
 }) {
+  const items = buildOrderItemsFromCart(data.cartItems);
+  const subtotalGross = roundCurrency(items.reduce((s, i) => s + i.grossAmount, 0));
+  const subtotalNet = roundCurrency(items.reduce((s, i) => s + i.netAmount, 0));
+  const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
+  const taxBreakdown = aggregateTaxBreakdown(items);
+  const total = roundCurrency(subtotalGross + data.shipping);
+
   const orderNumber = `KHM-${Date.now().toString(36).toUpperCase()}`;
   const orderRef = await addDoc(collection(db, "orders"), {
-    ...data,
+    userId: data.userId,
+    customerName: data.customerName,
+    customerEmail: data.customerEmail,
+    items,
+    subtotalNet,
+    subtotalGross,
+    taxTotal,
+    shipping: data.shipping,
+    total,
     orderNumber,
-    status: "pending",
+    status: "confirmed",
+    shippingAddress: data.shippingAddress,
+    notes: data.notes || null,
+    distanceKm: data.distanceKm || null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 
   const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}`;
-  await addDoc(collection(db, "invoices"), {
+  const invoiceRef = await addDoc(collection(db, "invoices"), {
     invoiceNumber,
     orderId: orderRef.id,
+    orderNumber,
     userId: data.userId,
     customerName: data.customerName,
     customerEmail: data.customerEmail,
-    items: data.items,
-    subtotal: data.subtotal,
-    tax: 0,
-    total: data.total,
+    items,
+    subtotalNet,
+    subtotalGross,
+    taxTotal,
+    taxBreakdown,
+    shipping: data.shipping,
+    total,
     status: "sent",
+    shippingAddress: data.shippingAddress,
     issuedAt: serverTimestamp(),
     dueAt: Timestamp.fromDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)),
   });
 
-  return orderRef;
+  await updateDoc(orderRef, { invoiceId: invoiceRef.id });
+
+  return { orderId: orderRef.id, orderNumber, invoiceId: invoiceRef.id };
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]) {
-  return updateDoc(doc(db, "orders", id), {
+  const updates: Record<string, unknown> = {
     status,
     updatedAt: serverTimestamp(),
-  });
+  };
+
+  if (status === "shipped") {
+    const order = await getOrder(id);
+    if (order && !order.deliveryNoteId) {
+      const noteRef = await createDeliveryNote(order);
+      updates.deliveryNoteId = noteRef.id;
+    }
+  }
+
+  return updateDoc(doc(db, "orders", id), updates);
 }
 
-// Invoices
+// ─── Invoices ─────────────────────────────────────────────────
+
+function mapInvoice(d: { id: string; data: () => Record<string, unknown> }): Invoice {
+  const data = d.data();
+  return {
+    id: d.id,
+    ...data,
+    subtotalNet: (data.subtotalNet as number) ?? 0,
+    subtotalGross: (data.subtotalGross as number) ?? (data.subtotal as number) ?? 0,
+    taxTotal: (data.taxTotal as number) ?? (data.tax as number) ?? 0,
+    taxBreakdown: (data.taxBreakdown as Invoice["taxBreakdown"]) ?? [],
+    shipping: (data.shipping as number) ?? 0,
+    issuedAt: toDate(data.issuedAt),
+    dueAt: toDate(data.dueAt),
+    paidAt: data.paidAt ? toDate(data.paidAt) : undefined,
+  } as Invoice;
+}
+
 export async function getInvoices(): Promise<Invoice[]> {
   const q = query(collection(db, "invoices"), orderBy("issuedAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-    issuedAt: toDate(d.data().issuedAt),
-    dueAt: toDate(d.data().dueAt),
-    paidAt: d.data().paidAt ? toDate(d.data().paidAt) : undefined,
-  })) as Invoice[];
+  return snap.docs.map(mapInvoice);
+}
+
+export async function getInvoicesByUser(userId: string): Promise<Invoice[]> {
+  const q = query(
+    collection(db, "invoices"),
+    where("userId", "==", userId),
+    orderBy("issuedAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(mapInvoice);
+}
+
+export async function getInvoice(id: string): Promise<Invoice | null> {
+  const snap = await getDoc(doc(db, "invoices", id));
+  if (!snap.exists()) return null;
+  return mapInvoice({ id: snap.id, data: () => snap.data() });
+}
+
+export async function getInvoiceByOrder(orderId: string): Promise<Invoice | null> {
+  const q = query(collection(db, "invoices"), where("orderId", "==", orderId));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return mapInvoice({ id: d.id, data: () => d.data() });
 }
 
 export async function updateInvoiceStatus(id: string, status: Invoice["status"]) {
@@ -199,7 +339,56 @@ export async function updateInvoiceStatus(id: string, status: Invoice["status"])
   return updateDoc(doc(db, "invoices", id), updates);
 }
 
-// Users / Customers
+// ─── Delivery Notes ───────────────────────────────────────────
+
+function mapDeliveryNote(d: { id: string; data: () => Record<string, unknown> }): DeliveryNote {
+  const data = d.data();
+  return {
+    id: d.id,
+    ...data,
+    createdAt: toDate(data.createdAt),
+  } as DeliveryNote;
+}
+
+export async function createDeliveryNote(order: Order) {
+  const deliveryNoteNumber = `LS-${Date.now().toString(36).toUpperCase()}`;
+  return addDoc(collection(db, "deliveryNotes"), {
+    deliveryNoteNumber,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    userId: order.userId,
+    customerName: order.customerName,
+    customerEmail: order.customerEmail,
+    items: order.items,
+    shippingAddress: order.shippingAddress,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function getDeliveryNotes(): Promise<DeliveryNote[]> {
+  const q = query(collection(db, "deliveryNotes"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(mapDeliveryNote);
+}
+
+export async function getDeliveryNote(id: string): Promise<DeliveryNote | null> {
+  const snap = await getDoc(doc(db, "deliveryNotes", id));
+  if (!snap.exists()) return null;
+  return mapDeliveryNote({ id: snap.id, data: () => snap.data() });
+}
+
+export async function getDeliveryNotesByUser(userId: string): Promise<DeliveryNote[]> {
+  const q = query(
+    collection(db, "deliveryNotes"),
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(mapDeliveryNote);
+}
+
+// ─── Users ────────────────────────────────────────────────────
+
 export async function getUsers(): Promise<User[]> {
   const snap = await getDocs(collection(db, "users"));
   return snap.docs.map((d) => ({
@@ -218,6 +407,8 @@ export async function getUser(id: string): Promise<User | null> {
     createdAt: toDate(snap.data().createdAt),
   } as User;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────
 
 export function slugify(text: string): string {
   return text

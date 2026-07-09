@@ -12,6 +12,8 @@ import {
   Users,
   LogOut,
   ArrowLeft,
+  Truck,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -21,7 +23,9 @@ const adminNav = [
   { href: "/admin/kategorien", icon: FolderTree, label: "Kategorien" },
   { href: "/admin/bestellungen", icon: ShoppingCart, label: "Bestellungen" },
   { href: "/admin/rechnungen", icon: FileText, label: "Rechnungen" },
+  { href: "/admin/versand", icon: Truck, label: "Versand" },
   { href: "/admin/kunden", icon: Users, label: "Kunden" },
+  { href: "/admin/einstellungen", icon: Settings, label: "Einstellungen" },
 ];
 
 export default function AdminLayout({

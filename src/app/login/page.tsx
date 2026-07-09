@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import PageHeader from "@/components/layout/PageHeader";
 
 function LoginForm() {
   const router = useRouter();
@@ -33,42 +34,20 @@ function LoginForm() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-16">
-      <div className="text-center mb-8">
-        <h1 className="font-display text-3xl font-bold text-wood-dark mb-2">
-          Anmelden
-        </h1>
-        <p className="text-wood/60">Willkommen zurück bei KHM</p>
-      </div>
+      <PageHeader label="Kundenbereich" title="Anmelden" description="Willkommen zurück bei KHM" />
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-cream rounded-2xl p-8 border border-wood/10 shadow-md space-y-4"
-      >
-        <Input
-          label="E-Mail"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <Input
-          label="Passwort"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+      <form onSubmit={handleSubmit} className="bg-linen border border-wood/10 p-8 space-y-4">
+        <Input label="E-Mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input label="Passwort" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Anmelden..." : "Anmelden"}
         </Button>
       </form>
 
-      <p className="text-center mt-6 text-sm text-wood/60">
+      <p className="text-center mt-6 text-sm text-stone">
         Noch kein Konto?{" "}
-        <Link href="/register" className="text-forest font-medium hover:underline">
-          Jetzt registrieren
-        </Link>
+        <Link href="/register" className="text-forest hover:underline">Jetzt registrieren</Link>
       </p>
     </div>
   );
