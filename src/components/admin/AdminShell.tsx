@@ -170,7 +170,7 @@ export default function AdminShell({
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-cream-dark/30">
       {/* Mobile header */}
-      <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 bg-wood-dark text-cream border-b border-cream/10 safe-area-top">
+      <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-wood-dark text-cream border-b border-cream/10">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -203,7 +203,7 @@ export default function AdminShell({
             aria-label="Menü schließen"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-[min(88vw,20rem)] max-w-xs bg-wood-dark text-cream flex flex-col shadow-2xl">
+          <aside className="relative w-[min(88vw,20rem)] max-w-xs bg-wood-dark text-cream flex flex-col shadow-2xl pt-[env(safe-area-inset-top)]">
             <div className="flex items-center justify-between p-4 border-b border-cream/10">
               <div>
                 <p className="font-display text-lg font-bold">KHM Admin</p>

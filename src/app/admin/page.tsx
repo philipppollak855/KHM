@@ -204,9 +204,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 lg:space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-light text-wood-dark mb-1">
+        <h1 className="font-display text-2xl sm:text-3xl font-light text-wood-dark mb-1">
           Dashboard
         </h1>
         <p className="text-stone text-sm">
@@ -214,28 +214,28 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {statCards.map(({ href, icon: Icon, label, value, hint, accent }) => (
           <Link
             key={label}
             href={href}
-            className={`group bg-linen border border-wood/10 p-5 hover:border-forest/30 transition-all ${accent || ""}`}
+            className={`group bg-linen border border-wood/10 p-4 sm:p-5 hover:border-forest/30 transition-all ${accent || ""}`}
           >
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 border border-forest/20 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-forest" strokeWidth={1.5} />
+            <div className="flex items-start justify-between mb-2 sm:mb-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 border border-forest/20 flex items-center justify-center">
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-forest" strokeWidth={1.5} />
               </div>
-              <ArrowRight className="w-4 h-4 text-stone/40 group-hover:text-forest transition-colors" />
+              <ArrowRight className="w-4 h-4 text-stone/40 group-hover:text-forest transition-colors hidden sm:block" />
             </div>
-            <p className="text-xs uppercase tracking-wider text-stone mb-1">{label}</p>
-            <p className="text-2xl font-display font-light text-wood-dark">{value}</p>
-            <p className="text-xs text-stone mt-1">{hint}</p>
+            <p className="text-[10px] sm:text-xs uppercase tracking-wider text-stone mb-1">{label}</p>
+            <p className="text-lg sm:text-2xl font-display font-light text-wood-dark">{value}</p>
+            <p className="text-[10px] sm:text-xs text-stone mt-1 line-clamp-1">{hint}</p>
           </Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        <section className="bg-linen border border-wood/10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+        <section className="bg-linen border border-wood/10 min-h-0">
           <div className="flex items-center justify-between p-5 border-b border-wood/10">
             <h2 className="font-display text-xl font-light text-wood-dark">
               Aktuelle Aufträge
@@ -316,45 +316,37 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
-      </div>
 
-      <section className="bg-linen border border-wood/10">
-        <div className="flex items-center justify-between p-5 border-b border-wood/10">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-600" strokeWidth={1.5} />
-            <h2 className="font-display text-xl font-light text-wood-dark">
-              Lager – Nachbestellung nötig
-            </h2>
+        <section className="bg-linen border border-wood/10 min-h-0">
+          <div className="flex items-center justify-between p-4 sm:p-5 border-b border-wood/10">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" strokeWidth={1.5} />
+              <h2 className="font-display text-lg sm:text-xl font-light text-wood-dark truncate">
+                Lager – Nachbestellung
+              </h2>
+            </div>
+            <Link
+              href="/admin/lager"
+              className="text-sm text-forest hover:underline flex items-center gap-1 shrink-0"
+            >
+              <span className="hidden sm:inline">Lager</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
-          <Link
-            href="/admin/lager"
-            className="text-sm text-forest hover:underline flex items-center gap-1"
-          >
-            Lager verwalten <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-wood/5">
-              <tr>
-                <th className="text-left p-4 font-medium text-wood-dark">Produkt</th>
-                <th className="text-left p-4 font-medium text-wood-dark">Bestand</th>
-                <th className="text-left p-4 font-medium text-wood-dark">Preis</th>
-                <th className="text-right p-4 font-medium text-wood-dark">Aktion</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lowStockProducts.map((p) => (
-                <tr key={p.id} className="border-t border-wood/10">
-                  <td className="p-4">
-                    <Link
-                      href="/admin/produkte"
-                      className="font-medium text-wood-dark hover:text-forest"
-                    >
-                      {p.name}
-                    </Link>
-                  </td>
-                  <td className="p-4">
+          <div className="divide-y divide-wood/10 max-h-[320px] overflow-y-auto">
+            {lowStockProducts.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4"
+              >
+                <div className="min-w-0">
+                  <Link
+                    href="/admin/produkte"
+                    className="font-medium text-wood-dark hover:text-forest truncate block"
+                  >
+                    {p.name}
+                  </Link>
+                  <p className="text-xs text-stone">
                     <span
                       className={
                         p.stock <= 0
@@ -364,84 +356,77 @@ export default function AdminDashboard() {
                     >
                       {p.stock} Stück
                     </span>
-                  </td>
-                  <td className="p-4">{formatPrice(p.price)}</td>
-                  <td className="p-4">
-                    <div className="flex justify-end">
-                      <StockInboundButton
-                        productId={p.id}
-                        productName={p.name}
-                        onSuccess={load}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {lowStockProducts.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-stone">
-                    Alle Lagerbestände sind ausreichend.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                    {" · "}
+                    {formatPrice(p.price)}
+                  </p>
+                </div>
+                <StockInboundButton
+                  productId={p.id}
+                  productName={p.name}
+                  onSuccess={load}
+                />
+              </div>
+            ))}
+            {lowStockProducts.length === 0 && (
+              <p className="p-8 text-center text-stone text-sm">
+                Alle Lagerbestände sind ausreichend.
+              </p>
+            )}
+          </div>
+        </section>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { href: "/admin/produkte", icon: Package, label: "Produkte" },
-          { href: "/admin/lager", icon: Boxes, label: "Lager" },
-          { href: "/admin/bestellungen", icon: ShoppingCart, label: "Bestellungen" },
-          { href: "/admin/kunden", icon: Users, label: "Kunden" },
-        ].map(({ href, icon: Icon, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className="flex items-center gap-3 p-4 bg-linen border border-wood/10 hover:border-forest/30 transition-colors"
-          >
-            <Icon className="w-4 h-4 text-forest" strokeWidth={1.5} />
-            <span className="text-sm text-wood-dark">{label}</span>
-          </Link>
-        ))}
-      </div>
+        <aside className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { href: "/admin/produkte", icon: Package, label: "Produkte" },
+              { href: "/admin/lager", icon: Boxes, label: "Lager" },
+              { href: "/admin/bestellungen", icon: ShoppingCart, label: "Bestellungen" },
+              { href: "/admin/kunden", icon: Users, label: "Kunden" },
+            ].map(({ href, icon: Icon, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 bg-linen border border-wood/10 hover:border-forest/30 transition-colors"
+              >
+                <Icon className="w-4 h-4 text-forest shrink-0" strokeWidth={1.5} />
+                <span className="text-xs sm:text-sm text-wood-dark">{label}</span>
+              </Link>
+            ))}
+          </div>
 
-      {products.length === 0 && (
-        <div className="bg-linen border border-wood/10 p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
+          {products.length === 0 && (
+            <div className="bg-linen border border-wood/10 p-4 sm:p-6">
               <h2 className="font-display text-lg font-light text-wood-dark mb-1 flex items-center gap-2">
                 <Sprout className="w-5 h-5 text-forest" />
                 Shop starten
               </h2>
-              <p className="text-sm text-stone">
+              <p className="text-sm text-stone mb-4">
                 Beispiel-Kategorien und -Produkte anlegen, um den Shop zu testen.
               </p>
-            </div>
-            <Button onClick={handleSeed} disabled={seeding}>
-              {seeding ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Wird angelegt...
-                </>
-              ) : (
-                <>
-                  <Sprout className="w-4 h-4" />
-                  Beispieldaten laden
-                </>
+              <Button onClick={handleSeed} disabled={seeding} className="w-full sm:w-auto">
+                {seeding ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Wird angelegt...
+                  </>
+                ) : (
+                  <>
+                    <Sprout className="w-4 h-4" />
+                    Beispieldaten laden
+                  </>
+                )}
+              </Button>
+              {seedMessage && (
+                <p
+                  className={`mt-4 text-sm ${seedMessage.includes("angelegt") ? "text-green-700" : "text-red-600"}`}
+                >
+                  {seedMessage}
+                </p>
               )}
-            </Button>
-          </div>
-          {seedMessage && (
-            <p
-              className={`mt-4 text-sm ${seedMessage.includes("angelegt") ? "text-green-700" : "text-red-600"}`}
-            >
-              {seedMessage}
-            </p>
+            </div>
           )}
-        </div>
-      )}
+        </aside>
+      </div>
     </div>
   );
 }
