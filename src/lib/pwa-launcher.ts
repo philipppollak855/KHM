@@ -18,7 +18,6 @@ export type PwaLauncherModule = {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Tailwind gradient stops for the icon tile */
   tile: string;
   glow: string;
 };
@@ -34,11 +33,11 @@ export const pwaLauncherPages: PwaLauncherPage[] = [
   {
     id: "quick",
     title: "Schnellzugriff",
-    subtitle: "Tägliche Aufgaben",
+    subtitle: "Übersicht & Kassa",
     modules: [
       {
         href: "/admin",
-        label: "Dashboard",
+        label: "Übersicht",
         icon: LayoutDashboard,
         tile: "from-wheat via-amber-600/90 to-orange-800",
         glow: "shadow-wheat/25",
@@ -69,8 +68,15 @@ export const pwaLauncherPages: PwaLauncherPage[] = [
   {
     id: "sales",
     title: "Verkauf",
-    subtitle: "Kunden & Kommunikation",
+    subtitle: "Bestellungen & Kunden",
     modules: [
+      {
+        href: "/admin/bestellungen",
+        label: "Bestellungen",
+        icon: ShoppingCart,
+        tile: "from-lime-300/80 via-moss to-forest",
+        glow: "shadow-lime-400/20",
+      },
       {
         href: "/admin/kunden",
         label: "Kunden",
@@ -85,6 +91,20 @@ export const pwaLauncherPages: PwaLauncherPage[] = [
         tile: "from-violet-300/70 via-indigo-600/80 to-wood-dark",
         glow: "shadow-violet-400/20",
       },
+    ],
+  },
+  {
+    id: "invoices",
+    title: "Rechnungen",
+    subtitle: "Finanzen & Mahnwesen",
+    modules: [
+      {
+        href: "/admin/rechnungen",
+        label: "Alle Rechnungen",
+        icon: FileText,
+        tile: "from-sage via-forest-light/90 to-forest",
+        glow: "shadow-sage/25",
+      },
       {
         href: "/admin/mahnungen",
         label: "Mahnwesen",
@@ -92,6 +112,13 @@ export const pwaLauncherPages: PwaLauncherPage[] = [
         tile: "from-amber-300/80 via-orange-600/90 to-red-900/80",
         glow: "shadow-amber-400/25",
       },
+    ],
+  },
+  {
+    id: "shop",
+    title: "Shop & Betrieb",
+    subtitle: "Sortiment & Einstellungen",
+    modules: [
       {
         href: "/admin/produkte",
         label: "Produkte",
@@ -99,13 +126,6 @@ export const pwaLauncherPages: PwaLauncherPage[] = [
         tile: "from-stone-200/70 via-bark to-wood",
         glow: "shadow-stone-400/15",
       },
-    ],
-  },
-  {
-    id: "ops",
-    title: "Betrieb",
-    subtitle: "Sortiment & Einstellungen",
-    modules: [
       {
         href: "/admin/kategorien",
         label: "Kategorien",
@@ -129,7 +149,7 @@ export const pwaLauncherPages: PwaLauncherPage[] = [
       },
       {
         href: "/admin/einstellungen",
-        label: "Einstellungen",
+        label: "Firma & Shop",
         icon: Settings,
         tile: "from-neutral-300/60 via-stone-500/80 to-wood-dark",
         glow: "shadow-neutral-400/15",

@@ -117,7 +117,7 @@ export default function PwaLauncher() {
 
               <div className="flex-1 flex items-center justify-center">
                 <div className="w-full max-w-sm rounded-[2rem] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-6 sm:p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-8 place-items-center">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-8 place-items-center auto-rows-fr">
                     {page.modules.map((module) => (
                       <LauncherTile key={module.href} module={module} />
                     ))}

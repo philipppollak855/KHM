@@ -4,13 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
-  LayoutDashboard,
   ShoppingCart,
+  FileText,
   Smartphone,
-  Menu,
+  Package,
   type LucideIcon,
 } from "lucide-react";
-import { isNavLinkActive } from "@/lib/admin-nav";
+import {
+  getActiveNavHubId,
+  getNavGroupById,
+  isNavLinkActive,
+  type AdminNavHubId,
+} from "@/lib/admin-nav";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 
 type Tab = {
@@ -18,7 +23,7 @@ type Tab = {
   label: string;
   icon: LucideIcon;
   href?: string;
-  action?: "menu";
+  hubId?: AdminNavHubId;
   isActive: (pathname: string) => boolean;
 };
 
@@ -31,18 +36,23 @@ const tabs: Tab[] = [
     isActive: (pathname) => pathname === "/admin/start",
   },
   {
-    id: "dashboard",
-    label: "Übersicht",
-    icon: LayoutDashboard,
-    href: "/admin",
-    isActive: (pathname) => pathname === "/admin",
+    id: "sales",
+    label: "Verkauf",
+    icon: ShoppingCart,
+    hubId: "sales",
+    isActive: (pathname) =>
+      isNavLinkActive(pathname, "/admin/bestellungen") ||
+      isNavLinkActive(pathname, "/admin/kunden") ||
+      isNavLinkActive(pathname, "/admin/kontaktanfragen"),
   },
   {
-    id: "orders",
-    label: "Aufträge",
-    icon: ShoppingCart,
-    href: "/admin/bestellungen",
-    isActive: (pathname) => isNavLinkActive(pathname, "/admin/bestellungen"),
+    id: "invoices",
+    label: "Rechnungen",
+    icon: FileText,
+    hubId: "invoices",
+    isActive: (pathname) =>
+      isNavLinkActive(pathname, "/admin/rechnungen") ||
+      isNavLinkActive(pathname, "/admin/mahnungen"),
   },
   {
     id: "pos",
@@ -52,18 +62,18 @@ const tabs: Tab[] = [
     isActive: (pathname) => pathname === "/pos" || pathname.startsWith("/pos/"),
   },
   {
-    id: "menu",
-    label: "Menü",
-    icon: Menu,
-    action: "menu",
-    isActive: () => false,
+    id: "shop",
+    label: "Shop",
+    icon: Package,
+    hubId: "shop",
+    isActive: (pathname) => getActiveNavHubId(pathname) === "shop",
   },
 ];
 
 export default function PwaBottomNav({
-  onMenuOpen,
+  onHubOpen,
 }: {
-  onMenuOpen?: () => void;
+  onHubOpen?: (hubId: AdminNavHubId) => void;
 }) {
   const pathname = usePathname() || "/";
   const isPwa = useIsStandalonePwa();
@@ -86,28 +96,30 @@ export default function PwaBottomNav({
                 : "text-cream/55 hover:text-cream hover:bg-cream/5"
             }`;
 
-            if (tab.action === "menu") {
-              if (onMenuOpen) {
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={onMenuOpen}
-                    className={baseClass}
-                    aria-label="Vollständiges Menü öffnen"
-                  >
-                    <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
-                    <span className="text-[10px] font-medium leading-none">{tab.label}</span>
-                  </button>
-                );
-              }
+            if (tab.hubId && onHubOpen) {
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => onHubOpen(tab.hubId!)}
+                  className={baseClass}
+                  aria-label={`${tab.label} – Unterpunkte anzeigen`}
+                >
+                  <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
+                  <span className="text-[10px] font-medium leading-none">{tab.label}</span>
+                </button>
+              );
+            }
 
+            if (tab.hubId) {
+              const fallbackHref =
+                getNavGroupById(tab.hubId)?.items[0]?.href ?? "/admin/start";
               return (
                 <Link
                   key={tab.id}
-                  href="/admin/start"
+                  href={fallbackHref}
                   className={baseClass}
-                  aria-label="Alle Module"
+                  aria-label={tab.label}
                 >
                   <Icon className="w-5 h-5" strokeWidth={1.75} />
                   <span className="text-[10px] font-medium leading-none">{tab.label}</span>

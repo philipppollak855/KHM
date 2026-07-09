@@ -15,12 +15,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  adminNavEntries,
+  adminNavHubs,
   getCurrentNavPage,
+  getCurrentNavHubLabel,
   isNavGroupActive,
   isNavLinkActive,
   type AdminNavGroup,
+  type AdminNavHubId,
 } from "@/lib/admin-nav";
+import MobileHubNav from "@/components/admin/MobileHubNav";
 import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import PwaBottomNav from "@/components/pwa/PwaBottomNav";
@@ -191,7 +194,7 @@ function NavMenu({
 }) {
   const defaultOpenGroups = useMemo(() => {
     const open = new Set<string>();
-    for (const entry of adminNavEntries) {
+    for (const entry of adminNavHubs) {
       if (entry.type === "group" && isNavGroupActive(pathname, entry)) {
         open.add(entry.id);
       }
@@ -220,7 +223,7 @@ function NavMenu({
 
   return (
     <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-      {adminNavEntries.map((entry) => {
+      {adminNavHubs.map((entry) => {
         if (entry.type === "link") {
           return (
             <NavLinkItem
@@ -296,10 +299,17 @@ export default function AdminShell({
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileFocusHub, setMobileFocusHub] = useState<AdminNavHubId | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const isPwa = useIsStandalonePwa();
 
   const currentPage = getCurrentNavPage(pathname);
+  const currentHub = getCurrentNavHubLabel(pathname);
+
+  const openMobileMenu = (hub?: AdminNavHubId) => {
+    setMobileFocusHub(hub ?? null);
+    setMobileOpen(true);
+  };
 
   usePwaOverlayBack(mobileOpen, "admin-menu", () => setMobileOpen(false));
 
@@ -342,22 +352,20 @@ export default function AdminShell({
   return (
     <div className={`min-h-dvh flex flex-col lg:flex-row bg-cream-dark/30 ${isPwa ? "pwa-admin-shell" : ""}`}>
       <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-wood-dark text-cream border-b border-cream/10">
-        {!isPwa && (
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="p-2 -ml-2 rounded-lg hover:bg-cream/10 touch-manipulation"
-            aria-label="Menü öffnen"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-        )}
-        <div className={`flex-1 min-w-0 ${isPwa ? "text-center px-2" : ""}`}>
+        <button
+          type="button"
+          onClick={() => openMobileMenu()}
+          className="p-2 -ml-2 rounded-lg hover:bg-cream/10 touch-manipulation"
+          aria-label="Menü öffnen"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <div className="flex-1 min-w-0 text-center px-1">
           <p className="font-display font-semibold truncate">
             {currentPage?.label || "KHM Admin"}
           </p>
-          <p className="text-[10px] text-cream/50 uppercase tracking-wider">
-            {isPwa ? "KHM Verwaltung" : "Verwaltung"}
+          <p className="text-[10px] text-cream/50 uppercase tracking-wider truncate">
+            {currentHub || (isPwa ? "KHM Verwaltung" : "Verwaltung")}
           </p>
         </div>
         {!isPwa ? (
@@ -369,7 +377,14 @@ export default function AdminShell({
             <Smartphone className="w-5 h-5" />
           </Link>
         ) : (
-          <div className="w-10 shrink-0" aria-hidden />
+          <button
+            type="button"
+            onClick={() => openMobileMenu()}
+            className="p-2 -mr-2 rounded-lg hover:bg-cream/10 touch-manipulation shrink-0"
+            aria-label="Hauptmenü"
+          >
+            <ChevronDown className="w-5 h-5 rotate-[-90deg]" />
+          </button>
         )}
       </header>
 
@@ -381,22 +396,25 @@ export default function AdminShell({
             aria-label="Menü schließen"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-[min(88vw,20rem)] max-w-xs bg-wood-dark text-cream flex flex-col shadow-2xl pt-[env(safe-area-inset-top)]">
+          <aside className="relative w-[min(92vw,22rem)] max-w-sm bg-wood-dark text-cream flex flex-col shadow-2xl pt-[env(safe-area-inset-top)]">
             <div className="flex items-center justify-between p-4 border-b border-cream/10 shrink-0">
               <div>
-                <p className="font-display text-lg font-bold">KHM Admin</p>
-                <p className="text-xs text-cream/50">Verwaltungsbereich</p>
+                <p className="font-display text-lg font-bold">Navigation</p>
+                <p className="text-xs text-cream/50">5 Bereiche mit Unterpunkten</p>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="p-2 rounded-lg hover:bg-cream/10"
+                className="p-2 rounded-lg hover:bg-cream/10 touch-manipulation"
                 aria-label="Menü schließen"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <NavMenu pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            <MobileHubNav
+              focusHub={mobileFocusHub}
+              onNavigate={() => setMobileOpen(false)}
+            />
             <SidebarFooter onLogout={onLogout} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
@@ -445,7 +463,7 @@ export default function AdminShell({
         </div>
       </main>
 
-      <PwaBottomNav onMenuOpen={() => setMobileOpen(true)} />
+      <PwaBottomNav onHubOpen={(hub) => openMobileMenu(hub)} />
     </div>
   );
 }
