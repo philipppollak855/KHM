@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { resolveDocumentSalutation } from "./customer-display";
 
 export function isEmailConfigured(): boolean {
   return !!(
@@ -11,6 +12,7 @@ export function isEmailConfigured(): boolean {
 export async function sendInvoiceEmail(options: {
   to: string;
   customerName: string;
+  userId?: string;
   invoiceNumber: string;
   orderNumber: string;
   total: string;
@@ -40,7 +42,7 @@ export async function sendInvoiceEmail(options: {
     to: options.to,
     subject: `Ihre Rechnung ${options.invoiceNumber} – KHM`,
     html: `
-      <p>Sehr geehrte/r ${options.customerName},</p>
+      <p>${resolveDocumentSalutation(options.customerName, options.userId)}</p>
       <p>vielen Dank für Ihren Einkauf bei Kevin's Handmade Manufactur.</p>
       <p>Bestellung: <strong>${options.orderNumber}</strong><br>
       Rechnung: <strong>${options.invoiceNumber}</strong><br>
@@ -61,6 +63,7 @@ export async function sendInvoiceEmail(options: {
 export async function sendDunningEmail(options: {
   to: string;
   customerName: string;
+  userId?: string;
   invoiceNumber: string;
   orderNumber: string;
   total: string;
@@ -102,7 +105,7 @@ export async function sendDunningEmail(options: {
     to: options.to,
     subject: `${options.reminderLabel}: Rechnung ${options.invoiceNumber} – KHM`,
     html: `
-      <p>Sehr geehrte/r ${options.customerName},</p>
+      <p>${resolveDocumentSalutation(options.customerName, options.userId)}</p>
       <p><strong>${options.reminderLabel}</strong></p>
       <p>zu Ihrer Bestellung <strong>${options.orderNumber}</strong> ist die Rechnung
       <strong>${options.invoiceNumber}</strong> über <strong>${options.total}</strong>

@@ -72,6 +72,7 @@ export async function processDunningReminders() {
       await sendDunningEmail({
         to: email,
         customerName: data.customerName as string,
+        userId: data.userId as string,
         invoiceNumber: data.invoiceNumber as string,
         orderNumber: data.orderNumber as string,
         total: formatEuro(data.total as number),
@@ -131,6 +132,7 @@ export async function sendManualReminder(invoiceId: string, adminUserId: string)
   await sendDunningEmail({
     to: email,
     customerName: data.customerName as string,
+    userId: data.userId as string,
     invoiceNumber: data.invoiceNumber as string,
     orderNumber: data.orderNumber as string,
     total: formatEuro(data.total as number),

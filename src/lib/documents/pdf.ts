@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { CompanySettings, Order, Invoice, DeliveryNote, OrderItem, TaxBreakdownLine } from "../types";
 import { formatPrice, formatDate } from "../firestore";
+import { resolveDocumentCustomerName, resolveDocumentSalutation } from "../customer-display";
 
 const FOREST: [number, number, number] = [61, 79, 50];
 const WOOD: [number, number, number] = [44, 33, 24];
@@ -55,7 +56,7 @@ function drawLetterhead(doc: jsPDF, company: CompanySettings, docTitle: string, 
 function drawAddressBlock(
   doc: jsPDF,
   label: string,
-  name: string,
+  name: string | null,
   street: string,
   zip: string,
   city: string,
@@ -70,10 +71,14 @@ function drawAddressBlock(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...WOOD);
-  doc.text(name, x, y + 6);
-  doc.text(street, x, y + 12);
-  doc.text(`${zip} ${city}`, x, y + 18);
-  doc.text(country, x, y + 24);
+  let lineY = y + 6;
+  if (name) {
+    doc.text(name, x, lineY);
+    lineY += 6;
+  }
+  doc.text(street, x, lineY);
+  doc.text(`${zip} ${city}`, x, lineY + 6);
+  doc.text(country, x, lineY + 12);
 }
 
 function itemTableBody(items: OrderItem[]) {
@@ -161,7 +166,7 @@ export function buildInvoicePdfDocument(
   drawAddressBlock(
     doc,
     "Rechnungsempfänger",
-    invoice.customerName,
+    resolveDocumentCustomerName(invoice.customerName, invoice.userId),
     invoice.shippingAddress.street,
     invoice.shippingAddress.zip,
     invoice.shippingAddress.city,
@@ -233,7 +238,7 @@ export function generateOrderConfirmationPdf(order: Order, company: CompanySetti
   drawAddressBlock(
     doc,
     "Lieferadresse",
-    order.customerName,
+    resolveDocumentCustomerName(order.customerName, order.userId),
     order.shippingAddress.street,
     order.shippingAddress.zip,
     order.shippingAddress.city,
@@ -244,7 +249,7 @@ export function generateOrderConfirmationPdf(order: Order, company: CompanySetti
 
   doc.setFontSize(9);
   doc.setTextColor(...WOOD);
-  doc.text(`Sehr geehrte/r ${order.customerName},`, 20, 92);
+  doc.text(resolveDocumentSalutation(order.customerName, order.userId), 20, 92);
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
   const lines = doc.splitTextToSize(
@@ -288,7 +293,7 @@ export function generateDeliveryNotePdf(note: DeliveryNote, company: CompanySett
   drawAddressBlock(
     doc,
     "Lieferadresse",
-    note.customerName,
+    resolveDocumentCustomerName(note.customerName, note.userId),
     note.shippingAddress.street,
     note.shippingAddress.zip,
     note.shippingAddress.city,

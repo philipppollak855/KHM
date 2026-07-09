@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
     await sendInvoiceEmail({
       to: email,
       customerName: invoice.customerName,
+      userId: invoice.userId,
       invoiceNumber: invoice.invoiceNumber,
       orderNumber: invoice.orderNumber,
       total: formatEuro(invoice.total),

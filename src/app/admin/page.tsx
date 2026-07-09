@@ -30,6 +30,7 @@ import type { Order, Product, ContactInquiry, Invoice } from "@/lib/types";
 import StockInboundButton from "@/components/admin/StockInboundButton";
 import OrderBadges from "@/components/admin/OrderBadges";
 import Button from "@/components/ui/Button";
+import { formatAdminCustomerName } from "@/lib/customer-display";
 
 const statusLabels: Record<Order["status"], string> = {
   pending: "Ausstehend",
@@ -266,7 +267,7 @@ export default function AdminDashboard() {
                   <div className="min-w-0">
                     <p className="font-medium text-wood-dark">{order.orderNumber}</p>
                     <p className="text-sm text-stone">
-                      {order.customerName} · {formatDate(order.createdAt)}
+                      {formatAdminCustomerName(order.customerName, order.userId)} · {formatDate(order.createdAt)}
                     </p>
                     <OrderBadges
                       order={order}

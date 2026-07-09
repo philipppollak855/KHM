@@ -16,6 +16,8 @@ import { adjustProductStock } from "@/lib/inventory";
 import { useAuth } from "@/context/AuthContext";
 import StockInboundButton from "@/components/admin/StockInboundButton";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminDataTable from "@/components/admin/AdminDataTable";
 import { matchesSearch } from "@/lib/search";
 import type { Product, Category } from "@/lib/types";
 import { calculateSellingPrice, TAX_RATES_AT } from "@/lib/pricing";
@@ -169,12 +171,14 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="font-display text-3xl font-bold text-wood-dark">
-          Produkte
-        </h1>
+    <div className="min-w-0">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
+        <AdminPageHeader
+          title="Produkte"
+          description="Artikel, Preise und Lagerbestände verwalten"
+        />
         <Button
+          className="w-full sm:w-auto shrink-0"
           onClick={() => {
             setShowForm(true);
             setEditingId(null);
@@ -196,7 +200,7 @@ export default function AdminProductsPage() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-cream rounded-2xl p-6 border border-wood/10 shadow-sm mb-8 space-y-4"
+          className="bg-cream rounded-2xl p-4 sm:p-6 border border-wood/10 shadow-sm mb-6 sm:mb-8 space-y-4 min-w-0"
         >
           <h2 className="font-display text-xl font-semibold">
             {editingId ? "Produkt bearbeiten" : "Neues Produkt"}
@@ -313,13 +317,14 @@ export default function AdminProductsPage() {
               Empfehlung
             </label>
           </div>
-          <div className="flex gap-3">
-            <Button type="submit">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button type="submit" className="w-full sm:w-auto">
               {editingId ? "Speichern" : "Erstellen"}
             </Button>
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setShowForm(false);
                 setEditingId(null);
@@ -331,7 +336,109 @@ export default function AdminProductsPage() {
         </form>
       )}
 
-      <div className="bg-cream rounded-2xl border border-wood/10 overflow-hidden">
+      <div className="lg:hidden space-y-3">
+        {filteredProducts.map((p) => (
+          <article
+            key={p.id}
+            className="bg-cream border border-wood/10 rounded-lg p-4 space-y-3 min-w-0"
+          >
+            <div className="flex gap-3 items-start">
+              <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-wood/5 border border-wood/10 shrink-0">
+                {p.imageUrl ? (
+                  <Image
+                    src={p.imageUrl}
+                    alt={p.name}
+                    fill
+                    className="object-cover"
+                    unoptimized={p.imageUrl.includes("firebasestorage")}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-stone">
+                    –
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-wood-dark break-words">{p.name}</p>
+                <p className="text-sm text-forest font-medium mt-0.5">{formatPrice(p.price)}</p>
+                <p className="text-xs text-stone mt-1">
+                  {categoryMap.get(p.categoryId) || "–"} · USt. {p.taxRate ?? 20} %
+                </p>
+              </div>
+              <span
+                className={`shrink-0 px-2 py-0.5 rounded-full text-xs ${
+                  p.active
+                    ? "bg-green-100 text-green-800"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {p.active ? "Aktiv" : "Inaktiv"}
+              </span>
+            </div>
+
+            <div className="text-sm">
+              <p className={`font-medium ${p.stock <= 0 ? "text-red-600" : "text-wood-dark"}`}>
+                Lager: {p.stock} Stück
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <StockInboundButton
+                productId={p.id}
+                productName={p.name}
+                label="Nachbestellen"
+                onSuccess={load}
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Menge"
+                  value={stockAdjust[p.id] || ""}
+                  onChange={(e) =>
+                    setStockAdjust((prev) => ({ ...prev, [p.id]: e.target.value }))
+                  }
+                  className="flex-1 min-w-0 rounded border border-wood/20 bg-linen px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleStockAdjust(p.id, p.name, "outbound")}
+                  className="text-sm text-red-600 hover:underline flex items-center gap-1 shrink-0 px-2"
+                >
+                  <PackageMinus className="w-4 h-4" />
+                  Ausbuchen
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-wood/10">
+              <button
+                type="button"
+                onClick={() => handleEdit(p)}
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm border border-wood/20 rounded-lg hover:bg-wood/5"
+              >
+                <Pencil className="w-4 h-4" />
+                Bearbeiten
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(p.id)}
+                className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </article>
+        ))}
+        {filteredProducts.length === 0 && (
+          <p className="text-center text-stone py-8">
+            {search ? "Keine Produkte gefunden." : "Noch keine Produkte vorhanden."}
+          </p>
+        )}
+      </div>
+
+      <div className="hidden lg:block">
+        <AdminDataTable minWidth="900px">
         <table className="w-full text-sm">
           <thead className="bg-wood/5">
             <tr>
@@ -437,6 +544,7 @@ export default function AdminProductsPage() {
             )}
           </tbody>
         </table>
+        </AdminDataTable>
       </div>
     </div>
   );

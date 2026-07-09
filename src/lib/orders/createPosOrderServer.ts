@@ -8,6 +8,7 @@ import {
 import type { Address, CartItem, PaymentMethod } from "@/lib/types";
 import { InsufficientStockError } from "./createOrderServer";
 import { resolveCartItemsServer } from "./validateCartServer";
+import { normalizePosCustomerName } from "@/lib/customer-display";
 import {
   createPaymentRecord,
   invoiceDueDate,
@@ -32,7 +33,7 @@ export async function createPosOrder(data: {
   notes?: string;
   cardReference?: string;
 }) {
-  if (!data.customerName?.trim()) {
+  if (!data.customerName?.trim() && data.customerUserId) {
     throw new Error("Kundenname ist erforderlich.");
   }
   if (data.paymentMethod === "bank_transfer" && !data.customerUserId) {
@@ -47,6 +48,10 @@ export async function createPosOrder(data: {
     throw new Error("Warenkorb ist leer.");
   }
 
+  const customerName = normalizePosCustomerName(
+    data.customerName,
+    data.customerUserId
+  );
   const db = getAdminFirestore();
   const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -110,7 +115,7 @@ export async function createPosOrder(data: {
 
     tx.set(orderRef, {
       userId,
-      customerName: data.customerName,
+      customerName,
       customerEmail,
       items,
       subtotalNet,
@@ -137,7 +142,7 @@ export async function createPosOrder(data: {
       orderId: orderRef.id,
       orderNumber,
       userId,
-      customerName: data.customerName,
+      customerName,
       customerEmail,
       items,
       subtotalNet,
@@ -162,7 +167,7 @@ export async function createPosOrder(data: {
       orderNumber,
       invoiceNumber,
       userId,
-      customerName: data.customerName,
+      customerName,
       customerEmail,
       amount: total,
       method: data.paymentMethod,

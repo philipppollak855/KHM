@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { createPosOrder } from "@/lib/orders/createPosOrderServer";
 import { InsufficientStockError } from "@/lib/orders/createOrderServer";
 import { handleRouteError, parseJsonBody } from "@/lib/api-route";
+import { normalizePosCustomerName } from "@/lib/customer-display";
 import type { Address, CartItem, PaymentMethod } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -16,8 +17,12 @@ export async function POST(req: NextRequest) {
     const body = await parseJsonBody(req);
     if (body instanceof NextResponse) return body;
 
-    const customerName = String(body.customerName || "").trim();
-    if (!customerName) {
+    const customerUserId = (body.customerUserId as string | null) ?? null;
+    const customerName = normalizePosCustomerName(
+      String(body.customerName || ""),
+      customerUserId
+    );
+    if (!customerName && customerUserId) {
       return NextResponse.json({ error: "Kundenname fehlt." }, { status: 400 });
     }
 
@@ -28,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const result = await createPosOrder({
       adminUserId: auth.uid,
-      customerUserId: (body.customerUserId as string | null) ?? null,
+      customerUserId,
       customerName,
       customerEmail: body.customerEmail ? String(body.customerEmail) : undefined,
       address: body.address as Partial<Address> | undefined,

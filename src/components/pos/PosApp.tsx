@@ -29,12 +29,19 @@ import {
 } from "@/lib/pos-api";
 import type { Category, Product, PosCartItem, PosCustomer, PaymentMethod } from "@/lib/types";
 import type { Address } from "@/lib/types";
+import { POS_WALK_IN_UI_LABEL } from "@/lib/customer-display";
 
 type View = "catalog" | "checkout" | "card_pending" | "success";
 
+function getPosCustomerLabel(customer: PosCustomer) {
+  if (customer.name?.trim()) return customer.name.trim();
+  if (customer.isWalkIn || !customer.id) return POS_WALK_IN_UI_LABEL;
+  return customer.email || POS_WALK_IN_UI_LABEL;
+}
+
 const walkInCustomer = (): PosCustomer => ({
   id: null,
-  name: "Laufkunde",
+  name: "",
   email: "",
   isWalkIn: true,
 });
@@ -414,7 +421,7 @@ export default function PosApp() {
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           <section className="bg-white border border-wood/10 p-4">
             <p className="text-xs uppercase tracking-wider text-stone mb-2">Kunde</p>
-            <p className="font-medium">{customer.name}</p>
+            <p className="font-medium">{getPosCustomerLabel(customer)}</p>
             {customer.email && <p className="text-sm text-stone">{customer.email}</p>}
             {customer.isWalkIn && (
               <label className="flex items-center gap-2 mt-3 text-sm">
@@ -552,7 +559,7 @@ export default function PosApp() {
               className="flex items-center gap-2 text-linen text-sm mt-0.5"
             >
               <User className="w-4 h-4 text-wheat" />
-              <span className="truncate max-w-[140px]">{customer.name}</span>
+              <span className="truncate max-w-[140px]">{getPosCustomerLabel(customer)}</span>
             </button>
           </div>
           <button
@@ -755,7 +762,7 @@ export default function PosApp() {
                 }}
                 className="w-full py-3 border-2 border-wood/15 text-left px-4"
               >
-                <p className="font-medium">Laufkunde</p>
+                <p className="font-medium">{POS_WALK_IN_UI_LABEL}</p>
                 <p className="text-xs text-stone">Ohne Kundenkonto</p>
               </button>
 

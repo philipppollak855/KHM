@@ -125,7 +125,7 @@ export function getOrderBadges(order: Order, invoice?: Invoice | null): BadgeIte
   if (isWalkInUserId(order.userId)) {
     badges.push({
       key: "walkin",
-      label: "Laufkunde",
+      label: "Verkauf vor Ort",
       tone: "neutral",
       title: "Kein Kundenkonto",
     });

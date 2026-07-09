@@ -10,6 +10,7 @@ import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import OrderBadges from "@/components/admin/OrderBadges";
 import { matchesSearch } from "@/lib/search";
 import { getOrderBadges } from "@/lib/badges";
+import { formatAdminCustomerName } from "@/lib/customer-display";
 
 const statuses: Order["status"][] = [
   "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
@@ -123,7 +124,7 @@ export default function AdminOrdersPage() {
             <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-wood-dark text-lg">{order.orderNumber}</p>
-                <p className="text-sm text-stone">{order.customerName} · {order.customerEmail}</p>
+                <p className="text-sm text-stone">{formatAdminCustomerName(order.customerName, order.userId)} · {order.customerEmail || "–"}</p>
                 <p className="text-sm text-stone mt-1">{formatDate(order.createdAt)}</p>
                 <OrderBadges order={order} invoice={invoice} className="mt-3" />
               </div>
