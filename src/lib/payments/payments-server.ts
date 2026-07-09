@@ -65,25 +65,27 @@ export async function confirmPaymentServer(options: {
 }) {
   const db = getAdminFirestore();
   const invoiceRef = db.collection("invoices").doc(options.invoiceId);
-  const invoiceSnap = await invoiceRef.get();
-  if (!invoiceSnap.exists) throw new Error("Rechnung nicht gefunden.");
-  const invoice = invoiceSnap.data()!;
-
-  if (invoice.status === "paid") {
-    throw new Error("Rechnung ist bereits bezahlt.");
-  }
-  if (invoice.status === "cancelled") {
-    throw new Error("Stornierte Rechnung kann nicht bezahlt werden.");
-  }
-
-  const paymentsSnap = await db
-    .collection("payments")
-    .where("invoiceId", "==", options.invoiceId)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
 
   await db.runTransaction(async (tx) => {
+    const invoiceSnap = await tx.get(invoiceRef);
+    if (!invoiceSnap.exists) throw new Error("Rechnung nicht gefunden.");
+    const invoice = invoiceSnap.data()!;
+
+    if (invoice.status === "paid") {
+      throw new Error("Rechnung ist bereits bezahlt.");
+    }
+    if (invoice.status === "cancelled") {
+      throw new Error("Stornierte Rechnung kann nicht bezahlt werden.");
+    }
+
+    const paymentsQuery = db
+      .collection("payments")
+      .where("invoiceId", "==", options.invoiceId)
+      .where("status", "==", "pending")
+      .limit(1);
+
+    const paymentsSnap = await tx.get(paymentsQuery);
+
     tx.update(invoiceRef, {
       status: "paid",
       paidAt: FieldValue.serverTimestamp(),
@@ -91,8 +93,7 @@ export async function confirmPaymentServer(options: {
     });
 
     if (!paymentsSnap.empty) {
-      const paymentRef = paymentsSnap.docs[0].ref;
-      tx.update(paymentRef, {
+      tx.update(paymentsSnap.docs[0].ref, {
         status: "completed",
         source: "manual",
         reference: options.reference || null,

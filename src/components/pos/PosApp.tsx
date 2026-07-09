@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { getActiveCategories, getActiveProducts, formatPrice } from "@/lib/firestore";
 import { calculateOrderTotals } from "@/lib/pricing";
-import { downloadInvoicePdf } from "@/lib/documents/download";
+import { downloadInvoicePdf, printInvoicePdf } from "@/lib/documents/download";
 import {
   searchPosCustomers,
   createPosCustomer,
@@ -77,14 +77,20 @@ export default function PosApp() {
   } | null>(null);
   const [cardReference, setCardReference] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   useEffect(() => {
+    setCatalogLoading(true);
     Promise.all([getActiveProducts(), getActiveCategories()])
       .then(([prods, cats]) => {
         setProducts(prods);
         setCategories(cats);
+        setCatalogError("");
       })
-      .catch(console.error);
+      .catch(() => setCatalogError("Produkte konnten nicht geladen werden."))
+      .finally(() => setCatalogLoading(false));
   }, []);
 
   useEffect(() => {
@@ -219,6 +225,7 @@ export default function PosApp() {
         address: created.address,
         isWalkIn: created.isWalkIn,
       };
+      if (created.tempPassword) setTempPassword(created.tempPassword);
     }
 
     if (method === "bank_transfer" && (!saleCustomer.id || saleCustomer.isWalkIn)) {
@@ -274,8 +281,11 @@ export default function PosApp() {
 
   const handlePrint = async () => {
     if (!saleResult) return;
-    await downloadInvoicePdf(saleResult.invoiceId);
-    window.print();
+    try {
+      await printInvoicePdf(saleResult.invoiceId);
+    } catch {
+      await downloadInvoicePdf(saleResult.invoiceId);
+    }
   };
 
   const handleEmail = async () => {
@@ -296,6 +306,7 @@ export default function PosApp() {
     setLinkToAccount(false);
     setCardReference("");
     setEmailStatus("");
+    setTempPassword(null);
     setView("catalog");
   };
 
@@ -317,6 +328,11 @@ export default function PosApp() {
             <p className="text-sm text-linen/70 mb-8 max-w-sm">
               Rechnung auf Kundenkonto – Zahlung per Überweisung offen.
               Bestätigung erfolgt nach Zahlungseingang im Admin.
+            </p>
+          )}
+          {tempPassword && (
+            <p className="text-sm text-wheat/90 mb-4 p-3 bg-black/20 rounded max-w-sm">
+              Kundenkonto erstellt. Temporäres Passwort: <strong>{tempPassword}</strong>
             </p>
           )}
           <div className="flex flex-col gap-3 w-full max-w-sm">
@@ -591,6 +607,22 @@ export default function PosApp() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-28">
+        {catalogLoading ? (
+          <div className="flex items-center justify-center py-20 text-linen/60 text-sm">
+            Produkte werden geladen…
+          </div>
+        ) : catalogError ? (
+          <div className="text-center py-20 px-4">
+            <p className="text-red-300 text-sm mb-4">{catalogError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-forest text-linen text-sm"
+            >
+              Erneut laden
+            </button>
+          </div>
+        ) : (
+        <>
         <div className="grid grid-cols-2 gap-3">
           {filteredProducts.map((p) => (
             <button
@@ -634,6 +666,8 @@ export default function PosApp() {
         </div>
         {filteredProducts.length === 0 && (
           <p className="text-center text-linen/50 py-12">Keine Produkte gefunden.</p>
+        )}
+        </>
         )}
       </div>
 

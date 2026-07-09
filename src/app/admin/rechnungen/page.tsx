@@ -27,12 +27,20 @@ const reminderLabels = ["–", "Erinnerung", "1. Mahnung", "2. Mahnung"];
 export default function AdminInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [confirmingInvoice, setConfirmingInvoice] = useState<Invoice | null>(null);
   const [reference, setReference] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const load = async () => setInvoices(await getInvoices());
+  const load = async () => {
+    setLoading(true);
+    try {
+      setInvoices(await getInvoices());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     load().catch(console.error);
@@ -66,7 +74,7 @@ export default function AdminInvoicesPage() {
         reference: reference || undefined,
         notes: "Manuell bestätigt",
       });
-      setConfirmingId(null);
+      setConfirmingInvoice(null);
       setReference("");
       await load();
     } catch (err) {
@@ -76,11 +84,15 @@ export default function AdminInvoicesPage() {
     }
   };
 
-  const handleReminder = async (invoiceId: string) => {
-    setActionLoading(invoiceId);
+  const handleReminder = async (inv: Invoice) => {
+    if (inv.dueAt > new Date()) {
+      setActionError("Mahnung erst nach Fälligkeit möglich.");
+      return;
+    }
+    setActionLoading(inv.id);
     setActionError("");
     try {
-      await sendInvoiceReminder(invoiceId);
+      await sendInvoiceReminder(inv.id);
       await load();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Fehler");
@@ -125,6 +137,9 @@ export default function AdminInvoicesPage() {
         totalCount={invoices.length}
       />
 
+      {loading ? (
+        <p className="text-stone py-12 text-center">Rechnungen werden geladen…</p>
+      ) : (
       <div className="bg-cream border border-wood/10 overflow-x-auto">
         <table className="w-full text-sm min-w-[900px]">
           <thead className="bg-wood/5">
@@ -186,18 +201,23 @@ export default function AdminInvoicesPage() {
                     {inv.status === "sent" && (
                       <>
                         <button
-                          onClick={() => setConfirmingId(confirmingId === inv.id ? null : inv.id)}
+                          onClick={() => {
+                            setReference("");
+                            setConfirmingInvoice(inv);
+                          }}
                           className="text-xs px-2 py-1 bg-forest text-linen rounded"
                         >
                           Zahlung bestätigen
                         </button>
-                        <button
-                          onClick={() => handleReminder(inv.id)}
-                          disabled={actionLoading === inv.id}
-                          className="text-xs px-2 py-1 border border-wood/20 rounded disabled:opacity-50"
-                        >
-                          Mahnen
-                        </button>
+                        {isOverdue && (
+                          <button
+                            onClick={() => handleReminder(inv)}
+                            disabled={actionLoading === inv.id}
+                            className="text-xs px-2 py-1 border border-wood/20 rounded disabled:opacity-50"
+                          >
+                            Mahnen
+                          </button>
+                        )}
                       </>
                     )}
                   </td>
@@ -214,11 +234,16 @@ export default function AdminInvoicesPage() {
           </tbody>
         </table>
       </div>
+      )}
 
-      {confirmingId && (
+      {confirmingInvoice && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center p-4 z-50">
-          <div className="bg-linen w-full max-w-md p-6 border border-wood/10">
-            <h2 className="font-display text-xl mb-4">Zahlung bestätigen</h2>
+          <div className="bg-linen w-full max-w-md p-6 border border-wood/10 shadow-xl">
+            <h2 className="font-display text-xl mb-1">Zahlung bestätigen</h2>
+            <p className="text-sm text-stone mb-4">
+              {confirmingInvoice.invoiceNumber} · {confirmingInvoice.customerName} ·{" "}
+              {formatPrice(confirmingInvoice.total)}
+            </p>
             <input
               placeholder="Referenz / Überweisungs-ID (optional)"
               value={reference}
@@ -227,15 +252,15 @@ export default function AdminInvoicesPage() {
             />
             <div className="flex gap-3">
               <button
-                onClick={() => handleConfirmPayment(confirmingId)}
-                disabled={actionLoading === confirmingId}
+                onClick={() => handleConfirmPayment(confirmingInvoice.id)}
+                disabled={actionLoading === confirmingInvoice.id}
                 className="flex-1 py-2.5 bg-forest text-linen disabled:opacity-50"
               >
-                {actionLoading === confirmingId ? "Speichern…" : "Bestätigen"}
+                {actionLoading === confirmingInvoice.id ? "Speichern…" : "Bestätigen"}
               </button>
               <button
                 onClick={() => {
-                  setConfirmingId(null);
+                  setConfirmingInvoice(null);
                   setReference("");
                 }}
                 className="px-4 py-2.5 border border-wood/20"

@@ -12,6 +12,7 @@ export default function AdminDunningPage() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [messageIsError, setMessageIsError] = useState(false);
 
   const load = async () => {
     const all = await getInvoices();
@@ -29,12 +30,14 @@ export default function AdminDunningPage() {
   const handleRemind = async (invoiceId: string) => {
     setActionId(invoiceId);
     setMessage("");
+    setMessageIsError(false);
     try {
       const result = await sendInvoiceReminder(invoiceId);
       setMessage(`Mahnung Stufe ${result.reminderLevel} gesendet.`);
       await load();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Fehler");
+      setMessageIsError(true);
     } finally {
       setActionId(null);
     }
@@ -61,7 +64,15 @@ export default function AdminDunningPage() {
       </div>
 
       {message && (
-        <p className="text-sm mb-4 p-3 bg-forest/10 text-forest border border-forest/20">{message}</p>
+        <p
+          className={`text-sm mb-4 p-3 border ${
+            messageIsError
+              ? "bg-red-50 text-red-700 border-red-200"
+              : "bg-forest/10 text-forest border-forest/20"
+          }`}
+        >
+          {message}
+        </p>
       )}
 
       {loading ? (

@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { processDunningReminders } from "@/lib/payments/dunning-server";
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("Authorization");
   const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return NextResponse.json(
+      { error: "CRON_SECRET nicht konfiguriert." },
+      { status: 503 }
+    );
+  }
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  const authHeader = req.headers.get("Authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

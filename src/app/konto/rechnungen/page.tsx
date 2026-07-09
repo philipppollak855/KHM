@@ -24,6 +24,7 @@ export default function CustomerInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [company, setCompany] = useState<CompanySettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -35,8 +36,9 @@ export default function CustomerInvoicesPage() {
         .then(([inv, comp]) => {
           setInvoices(inv);
           setCompany(comp);
+          setLoadError("");
         })
-        .catch(console.error)
+        .catch(() => setLoadError("Rechnungen konnten nicht geladen werden."))
         .finally(() => setLoading(false));
     }
   }, [user]);
@@ -65,6 +67,10 @@ export default function CustomerInvoicesPage() {
             BIC: {company.bic}
           </p>
         </div>
+      )}
+
+      {loadError && (
+        <p className="text-red-600 text-sm mb-6 p-4 bg-red-50 border border-red-100">{loadError}</p>
       )}
 
       {loading ? (

@@ -7,6 +7,7 @@ import {
 } from "@/lib/pricing";
 import type { Address, CartItem, PaymentMethod } from "@/lib/types";
 import { InsufficientStockError } from "./createOrderServer";
+import { resolveCartItemsServer } from "./validateCartServer";
 import {
   createPaymentRecord,
   invoiceDueDate,
@@ -31,20 +32,24 @@ export async function createPosOrder(data: {
   notes?: string;
   cardReference?: string;
 }) {
+  if (!data.customerName?.trim()) {
+    throw new Error("Kundenname ist erforderlich.");
+  }
   if (data.paymentMethod === "bank_transfer" && !data.customerUserId) {
     throw new Error("Überweisung ist nur mit Kundenkonto möglich.");
   }
 
+  const validMethods: PaymentMethod[] = ["cash", "card", "bank_transfer"];
+  if (!validMethods.includes(data.paymentMethod)) {
+    throw new Error("Ungültige Zahlungsart.");
+  }
+  if (!Array.isArray(data.cartItems) || data.cartItems.length === 0) {
+    throw new Error("Warenkorb ist leer.");
+  }
+
   const db = getAdminFirestore();
-  const items = buildOrderItemsFromCart(data.cartItems);
-  const subtotalGross = roundCurrency(items.reduce((s, i) => s + i.grossAmount, 0));
-  const subtotalNet = roundCurrency(items.reduce((s, i) => s + i.netAmount, 0));
-  const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
-  const taxBreakdown = aggregateTaxBreakdown(items);
-  const shipping = 0;
-  const total = roundCurrency(subtotalGross + shipping);
-  const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}`;
-  const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}`;
+  const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
   const paidNow = isImmediatePayment(data.paymentMethod);
 
   const shippingAddress: Address = {
@@ -55,19 +60,31 @@ export async function createPosOrder(data: {
   };
 
   const totalsByProduct = new Map<string, { name: string; quantity: number }>();
-  for (const item of data.cartItems) {
-    const existing = totalsByProduct.get(item.productId);
-    if (existing) existing.quantity += item.quantity;
-    else totalsByProduct.set(item.productId, { name: item.name, quantity: item.quantity });
-  }
 
   const orderRef = db.collection("orders").doc();
   const invoiceRef = db.collection("invoices").doc();
   const paymentRef = db.collection("payments").doc();
   const userId = data.customerUserId || `pos-walkin-${orderRef.id}`;
   const customerEmail = data.customerEmail || "";
+  let saleTotal = 0;
 
   await db.runTransaction(async (tx) => {
+    const cartItems = await resolveCartItemsServer(tx, db, data.cartItems);
+    const items = buildOrderItemsFromCart(cartItems);
+    const subtotalGross = roundCurrency(items.reduce((s, i) => s + i.grossAmount, 0));
+    const subtotalNet = roundCurrency(items.reduce((s, i) => s + i.netAmount, 0));
+    const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
+    const taxBreakdown = aggregateTaxBreakdown(items);
+    const shipping = 0;
+    const total = roundCurrency(subtotalGross + shipping);
+    saleTotal = total;
+
+    for (const item of cartItems) {
+      const existing = totalsByProduct.get(item.productId);
+      if (existing) existing.quantity += item.quantity;
+      else totalsByProduct.set(item.productId, { name: item.name, quantity: item.quantity });
+    }
+
     const productUpdates: {
       ref: DocumentReference;
       name: string;
@@ -184,7 +201,7 @@ export async function createPosOrder(data: {
     invoiceId: invoiceRef.id,
     invoiceNumber,
     paymentId: paymentRef.id,
-    total,
+    total: saleTotal,
     paymentStatus: paidNow ? ("paid" as const) : ("pending" as const),
     paymentMethod: data.paymentMethod,
   };

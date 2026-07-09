@@ -120,6 +120,10 @@ export async function sendManualReminder(invoiceId: string, adminUserId: string)
   const email = data.customerEmail as string;
   if (!email) throw new Error("Keine E-Mail-Adresse beim Kunden.");
 
+  if (!isEmailConfigured()) {
+    throw new Error("E-Mail-Versand nicht konfiguriert (SMTP).");
+  }
+
   const currentLevel = Math.min(((data.reminderLevel as number) || 0) + 1, 3);
   const dueAt = data.dueAt?.toDate?.() as Date;
   const company = await getCompanySettingsServer();

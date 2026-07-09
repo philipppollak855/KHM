@@ -3,6 +3,7 @@ import { getAdminFirestore } from "@/lib/firebase-admin";
 import { buildOrderItemsFromCart, aggregateTaxBreakdown, roundCurrency } from "@/lib/pricing";
 import type { Address, CartItem } from "@/lib/types";
 import { createPaymentRecord, invoiceDueDate } from "@/lib/payments/payments-server";
+import { resolveCartItemsServer } from "./validateCartServer";
 
 export class InsufficientStockError extends Error {
   constructor(
@@ -17,6 +18,10 @@ export class InsufficientStockError extends Error {
   }
 }
 
+function uniqueId(prefix: string) {
+  return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
 export async function createOrderWithStockDeduction(data: {
   userId: string;
   customerName: string;
@@ -28,33 +33,31 @@ export async function createOrderWithStockDeduction(data: {
   distanceKm?: number;
 }) {
   const db = getAdminFirestore();
-  const items = buildOrderItemsFromCart(data.cartItems);
-  const subtotalGross = roundCurrency(items.reduce((s, i) => s + i.grossAmount, 0));
-  const subtotalNet = roundCurrency(items.reduce((s, i) => s + i.netAmount, 0));
-  const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
-  const taxBreakdown = aggregateTaxBreakdown(items);
-  const total = roundCurrency(subtotalGross + data.shipping);
-  const orderNumber = `KHM-${Date.now().toString(36).toUpperCase()}`;
-  const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}`;
-
-  const totalsByProduct = new Map<string, { name: string; quantity: number }>();
-  for (const item of data.cartItems) {
-    const existing = totalsByProduct.get(item.productId);
-    if (existing) {
-      existing.quantity += item.quantity;
-    } else {
-      totalsByProduct.set(item.productId, {
-        name: item.name,
-        quantity: item.quantity,
-      });
-    }
-  }
-
   const orderRef = db.collection("orders").doc();
   const invoiceRef = db.collection("invoices").doc();
   const paymentRef = db.collection("payments").doc();
+  const orderNumber = uniqueId("KHM");
+  const invoiceNumber = uniqueId("RE");
+
+  let resultOrderId = "";
+  let resultInvoiceId = "";
 
   await db.runTransaction(async (tx) => {
+    const cartItems = await resolveCartItemsServer(tx, db, data.cartItems);
+    const items = buildOrderItemsFromCart(cartItems);
+    const subtotalGross = roundCurrency(items.reduce((s, i) => s + i.grossAmount, 0));
+    const subtotalNet = roundCurrency(items.reduce((s, i) => s + i.netAmount, 0));
+    const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
+    const taxBreakdown = aggregateTaxBreakdown(items);
+    const total = roundCurrency(subtotalGross + data.shipping);
+
+    const totalsByProduct = new Map<string, { name: string; quantity: number }>();
+    for (const item of cartItems) {
+      const existing = totalsByProduct.get(item.productId);
+      if (existing) existing.quantity += item.quantity;
+      else totalsByProduct.set(item.productId, { name: item.name, quantity: item.quantity });
+    }
+
     const productUpdates: {
       ref: DocumentReference;
       name: string;
@@ -65,9 +68,7 @@ export async function createOrderWithStockDeduction(data: {
     for (const [productId, { name, quantity }] of totalsByProduct) {
       const productRef = db.collection("products").doc(productId);
       const snap = await tx.get(productRef);
-      if (!snap.exists) {
-        throw new Error(`Produkt „${name}“ nicht gefunden.`);
-      }
+      if (!snap.exists) throw new Error(`Produkt „${name}“ nicht gefunden.`);
       const stock = (snap.data()?.stock as number) ?? 0;
       if (stock < quantity) {
         throw new InsufficientStockError(name, stock, quantity);
@@ -157,11 +158,14 @@ export async function createOrderWithStockDeduction(data: {
         createdAt: FieldValue.serverTimestamp(),
       });
     }
+
+    resultOrderId = orderRef.id;
+    resultInvoiceId = invoiceRef.id;
   });
 
   return {
-    orderId: orderRef.id,
+    orderId: resultOrderId,
     orderNumber,
-    invoiceId: invoiceRef.id,
+    invoiceId: resultInvoiceId,
   };
 }
