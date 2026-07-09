@@ -416,7 +416,7 @@ export default function AdminShell({
       <main className="flex-1 min-w-0 w-full overflow-x-hidden">
         <div
           className={`p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full min-w-0 ${
-            isPwa ? "pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:pb-8" : ""
+            isPwa ? "pb-pwa-nav lg:pb-8" : ""
           }`}
         >
           {children}

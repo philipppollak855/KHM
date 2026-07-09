@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LayoutDashboard, LayoutGrid } from "lucide-react";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import { getAdminHomePath } from "@/lib/auth-redirect";
 
 export default function PosDashboardLink({
   compact = false,
@@ -12,7 +13,7 @@ export default function PosDashboardLink({
   className?: string;
 }) {
   const isPwa = useIsStandalonePwa();
-  const href = isPwa ? "/admin/start" : "/admin";
+  const href = getAdminHomePath({ pwa: isPwa });
   const label = isPwa ? "Start" : "Dashboard";
   const Icon = isPwa ? LayoutGrid : LayoutDashboard;
 

@@ -342,7 +342,7 @@ export default function PosApp() {
     const isPending = saleResult.paymentStatus === "pending";
     const isCard = saleResult.paymentMethod === "card";
     return (
-      <div className="min-h-dvh flex flex-col p-6 bg-gradient-to-b from-forest to-wood-dark">
+      <div className="min-h-dvh flex flex-col p-6 pb-pwa-nav bg-gradient-to-b from-forest to-wood-dark">
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <CheckCircle2 className="w-16 h-16 text-wheat mb-4" strokeWidth={1.5} />
           <h1 className="font-display text-3xl font-light mb-2">
@@ -403,7 +403,7 @@ export default function PosApp() {
 
   if (view === "card_pending") {
     return (
-      <div className="min-h-dvh flex flex-col bg-linen text-wood-dark">
+      <div className="min-h-dvh flex flex-col pb-pwa-nav bg-linen text-wood-dark">
         <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
           <button onClick={() => setView("checkout")} className="p-2" aria-label="Zurück">
             <ArrowLeft className="w-5 h-5" />
@@ -438,7 +438,7 @@ export default function PosApp() {
 
   if (view === "checkout") {
     return (
-      <div className="min-h-dvh flex flex-col bg-linen text-wood-dark">
+      <div className="min-h-dvh flex flex-col pb-pwa-nav bg-linen text-wood-dark">
         <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
           <button onClick={() => setView("catalog")} className="p-2" aria-label="Zurück">
             <ArrowLeft className="w-5 h-5" />
@@ -648,7 +648,7 @@ export default function PosApp() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-28">
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {catalogLoading ? (
           <div className="flex items-center justify-center py-20 text-linen/60 text-sm">
             Produkte werden geladen…
@@ -714,9 +714,9 @@ export default function PosApp() {
       </div>
 
       {cartOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-[55] flex flex-col justify-end">
           <div className="absolute inset-0 bg-wood-dark/60" onClick={() => setCartOpen(false)} />
-          <div className="relative bg-linen text-wood-dark rounded-t-2xl max-h-[80vh] flex flex-col">
+          <div className="relative bg-linen text-wood-dark rounded-t-2xl max-h-[80vh] flex flex-col mb-pwa-nav">
             <div className="flex items-center justify-between p-4 border-b border-wood/10">
               <h2 className="font-display text-xl">Warenkorb</h2>
               <button onClick={() => setCartOpen(false)}>
@@ -780,9 +780,9 @@ export default function PosApp() {
       )}
 
       {customerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center p-4">
           <div className="absolute inset-0 bg-wood-dark/70" onClick={() => setCustomerOpen(false)} />
-          <div className="relative w-full max-w-md bg-linen text-wood-dark rounded-2xl max-h-[85vh] overflow-y-auto">
+          <div className="relative w-full max-w-md bg-linen text-wood-dark rounded-2xl max-h-[85vh] overflow-y-auto mb-pwa-nav sm:mb-0">
             <div className="flex items-center justify-between p-4 border-b border-wood/10">
               <h2 className="font-display text-xl">Kunde</h2>
               <button onClick={() => setCustomerOpen(false)}>

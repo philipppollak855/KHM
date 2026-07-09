@@ -27,7 +27,7 @@ export default function PosLayoutGuard({ children }: { children: React.ReactNode
   return (
     <>
       <PwaRootGuard />
-      <div className="min-h-dvh bg-wood-dark text-linen pwa-pos-shell pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <div className="min-h-dvh bg-wood-dark text-linen pwa-pos-shell pb-pwa-nav lg:pb-0">
         {children}
       </div>
       <PwaBottomNav />

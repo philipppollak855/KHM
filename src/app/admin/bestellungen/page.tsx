@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { ChevronRight } from "lucide-react";
 import { getOrders, getInvoices, updateOrderStatus, formatPrice, formatDate } from "@/lib/firestore";
-import { downloadOrderConfirmationPdf, downloadDeliveryNotePdf } from "@/lib/documents/download";
 import type { Invoice, Order } from "@/lib/types";
-import DownloadButton from "@/components/documents/DownloadButton";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import OrderBadges from "@/components/admin/OrderBadges";
+import OrderDetailPanel from "@/components/admin/OrderDetailPanel";
 import { matchesSearch } from "@/lib/search";
 import { getOrderBadges } from "@/lib/badges";
 import { formatAdminCustomerName } from "@/lib/customer-display";
+import { ORDER_STATUS_LABELS } from "@/lib/customer-insights";
 import { isDateInRange, type PeriodPreset } from "@/lib/date-filters";
 import { computeOrderReport } from "@/lib/admin-reports";
 import AdminPeriodFilter, {
@@ -18,19 +19,7 @@ import AdminPeriodFilter, {
   useDefaultCustomRange,
 } from "@/components/admin/AdminPeriodFilter";
 import AdminReportCards, { AdminFilterChips } from "@/components/admin/AdminReportCards";
-
-const statuses: Order["status"][] = [
-  "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
-];
-
-const statusLabels: Record<Order["status"], string> = {
-  pending: "Ausstehend",
-  confirmed: "Bestätigt",
-  processing: "In Bearbeitung",
-  shipped: "Versendet",
-  delivered: "Zugestellt",
-  cancelled: "Storniert",
-};
+import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
 
 export default function AdminOrdersPage() {
   const defaultRange = useDefaultCustomRange();
@@ -44,6 +33,10 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "open" | "completed" | "cancelled"
   >("all");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const closeDetail = useCallback(() => setSelectedOrder(null), []);
+  usePwaOverlayBack(!!selectedOrder, "order-detail", closeDetail);
 
   const load = async () => {
     const [orderList, invoiceList] = await Promise.all([getOrders(), getInvoices()]);
@@ -90,7 +83,7 @@ export default function AdminOrdersPage() {
           order.orderNumber,
           order.customerName,
           order.customerEmail,
-          statusLabels[order.status],
+          ORDER_STATUS_LABELS[order.status],
           order.total,
           formatPrice(order.total),
           order.shippingAddress.street,
@@ -151,8 +144,17 @@ export default function AdminOrdersPage() {
 
   const handleStatusChange = async (id: string, status: Order["status"]) => {
     await updateOrderStatus(id, status);
-    await load();
+    const [orderList, invoiceList] = await Promise.all([getOrders(), getInvoices()]);
+    setOrders(orderList);
+    setInvoices(invoiceList);
+    setSelectedOrder((current) =>
+      current?.id === id ? orderList.find((o) => o.id === id) ?? null : current
+    );
   };
+
+  const selectedInvoice = selectedOrder
+    ? invoiceByOrderId.get(selectedOrder.id)
+    : undefined;
 
   return (
     <div>
@@ -201,65 +203,74 @@ export default function AdminOrdersPage() {
         totalCount={orders.length}
       />
 
-      <div className="space-y-4">
+      <div className="bg-linen border border-wood/10 rounded-lg divide-y divide-wood/10 overflow-hidden">
         {filteredOrders.map((order) => {
           const invoice = invoiceByOrderId.get(order.id);
+          const itemSummary =
+            order.items.length === 1
+              ? `1 Artikel`
+              : `${order.items.length} Artikel`;
+
           return (
-          <div key={order.id} className="bg-cream border border-wood/10 p-4 sm:p-6 rounded-lg">
-            <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-wood-dark text-lg">{order.orderNumber}</p>
-                <p className="text-sm text-stone">{formatAdminCustomerName(order.customerName, order.userId)} · {order.customerEmail || "–"}</p>
-                <p className="text-sm text-stone mt-1">{formatDate(order.createdAt)}</p>
-                <OrderBadges order={order} invoice={invoice} className="mt-3" />
+            <button
+              key={order.id}
+              type="button"
+              onClick={() => setSelectedOrder(order)}
+              className="w-full text-left px-3 py-2.5 sm:px-4 sm:py-3 hover:bg-wood/5 active:bg-wood/8 transition-colors touch-manipulation"
+            >
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-wood-dark text-sm">
+                      {order.orderNumber}
+                    </span>
+                    <span className="text-[11px] text-stone hidden sm:inline">
+                      {ORDER_STATUS_LABELS[order.status]}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone mt-0.5 truncate">
+                    {formatAdminCustomerName(order.customerName, order.userId)}
+                    <span className="mx-1.5 text-wood/30">·</span>
+                    {formatDate(order.createdAt)}
+                    <span className="mx-1.5 text-wood/30 hidden sm:inline">·</span>
+                    <span className="hidden sm:inline">{itemSummary}</span>
+                  </p>
+                  <OrderBadges
+                    order={order}
+                    invoice={invoice}
+                    className="mt-1.5 gap-1"
+                  />
+                </div>
+                <div className="shrink-0 text-right flex items-center gap-2">
+                  <div>
+                    <p className="font-semibold text-forest text-sm tabular-nums">
+                      {formatPrice(order.total)}
+                    </p>
+                    <p className="text-[10px] text-stone sm:hidden mt-0.5">
+                      {ORDER_STATUS_LABELS[order.status]}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-stone/40 shrink-0" />
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={order.status}
-                  onChange={(e) => handleStatusChange(order.id, e.target.value as Order["status"])}
-                  className="w-full sm:w-auto rounded-lg border-2 border-wood/20 bg-linen px-3 py-2.5 text-base sm:text-sm"
-                >
-                  {statuses.map((s) => (
-                    <option key={s} value={s}>{statusLabels[s]}</option>
-                  ))}
-                </select>
-                <span className="font-semibold text-forest">{formatPrice(order.total)}</span>
-              </div>
-            </div>
-
-            <div className="text-sm text-stone space-y-1 mb-4">
-              {order.items.map((item, i) => (
-                <p key={i}>
-                  {item.quantity}× {item.name} – {formatPrice(item.grossAmount)} (USt. {item.taxRate} %)
-                </p>
-              ))}
-            </div>
-
-            <p className="text-sm text-stone mb-4">
-              Lieferadresse: {order.shippingAddress.street}, {order.shippingAddress.zip} {order.shippingAddress.city}, {order.shippingAddress.country}
-            </p>
-
-            <div className="flex flex-wrap gap-2 pt-3 border-t border-wood/10">
-              <DownloadButton
-                label="Auftragsbestätigung"
-                onClick={() => downloadOrderConfirmationPdf(order.id)}
-              />
-              {order.deliveryNoteId && (
-                <DownloadButton
-                  label="Lieferschein"
-                  onClick={() => downloadDeliveryNotePdf(order.deliveryNoteId!)}
-                />
-              )}
-            </div>
-          </div>
-        );
+            </button>
+          );
         })}
         {filteredOrders.length === 0 && (
-          <p className="text-center text-stone py-12">
+          <p className="text-center text-stone py-12 text-sm">
             {search ? "Keine Bestellungen gefunden." : "Noch keine Bestellungen."}
           </p>
         )}
       </div>
+
+      {selectedOrder && (
+        <OrderDetailPanel
+          order={selectedOrder}
+          invoice={selectedInvoice}
+          onClose={closeDetail}
+          onStatusChange={handleStatusChange}
+        />
+      )}
     </div>
   );
 }

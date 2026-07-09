@@ -20,10 +20,6 @@ export default function PwaRootGuard() {
       "--pwa-safe-bottom",
       standalone ? "env(safe-area-inset-bottom)" : "0px"
     );
-    root.style.setProperty(
-      "--pwa-bottom-nav",
-      standalone ? "5.75rem" : "0px"
-    );
 
     root.classList.toggle("pwa-standalone", standalone);
 

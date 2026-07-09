@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -70,6 +71,33 @@ const tabs: Tab[] = [
 export default function PwaBottomNav() {
   const pathname = usePathname() || "/";
   const isPwa = useIsStandalonePwa();
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+
+    if (!isPwa) {
+      root.style.setProperty("--pwa-bottom-nav", "0px");
+      return;
+    }
+
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const syncInset = () => {
+      root.style.setProperty(
+        "--pwa-bottom-nav",
+        mq.matches ? PWA_BOTTOM_NAV_HEIGHT : "0px"
+      );
+    };
+
+    syncInset();
+    mq.addEventListener("change", syncInset);
+
+    return () => {
+      mq.removeEventListener("change", syncInset);
+      root.style.setProperty("--pwa-bottom-nav", "0px");
+    };
+  }, [isPwa]);
 
   if (!isPwa) return null;
 

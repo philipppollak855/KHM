@@ -214,7 +214,22 @@ html.pwa-standalone body {
   user-select: none;
 }
 
+/* Abstand für fixierte Bottom-Navigation (nur Mobil/PWA) */
+.pb-pwa-nav {
+  padding-bottom: calc(var(--pwa-bottom-nav, 0px) + env(safe-area-inset-bottom, 0px));
+}
+
+.mb-pwa-nav {
+  margin-bottom: calc(var(--pwa-bottom-nav, 0px) + env(safe-area-inset-bottom, 0px));
+}
+
 @media (min-width: 1024px) {
+  .pb-pwa-nav,
+  .mb-pwa-nav {
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
   html.pwa-standalone .pwa-bottom-nav {
     display: none;
   }

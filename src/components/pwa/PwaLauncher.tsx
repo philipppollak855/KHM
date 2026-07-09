@@ -66,7 +66,7 @@ export default function PwaLauncher() {
   }, []);
 
   return (
-    <div className="pwa-launcher min-h-dvh flex flex-col overflow-hidden text-cream select-none pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
+    <div className="pwa-launcher min-h-dvh flex flex-col overflow-hidden text-cream select-none pb-pwa-nav">
       <div className="pwa-launcher-bg pointer-events-none" aria-hidden />
 
       <header className="relative z-10 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-4">
