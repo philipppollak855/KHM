@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getOrders, updateOrderStatus, formatPrice, formatDate } from "@/lib/firestore";
 import { downloadOrderConfirmationPdf, downloadDeliveryNotePdf } from "@/lib/documents/download";
 import type { Order } from "@/lib/types";
 import DownloadButton from "@/components/documents/DownloadButton";
+import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import { matchesSearch } from "@/lib/search";
 
 const statuses: Order["status"][] = [
   "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
@@ -21,12 +23,33 @@ const statusLabels: Record<Order["status"], string> = {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [search, setSearch] = useState("");
 
   const load = async () => setOrders(await getOrders());
 
   useEffect(() => {
     load().catch(console.error);
   }, []);
+
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter((order) =>
+        matchesSearch(search, [
+          order.orderNumber,
+          order.customerName,
+          order.customerEmail,
+          statusLabels[order.status],
+          order.total,
+          formatPrice(order.total),
+          order.shippingAddress.street,
+          order.shippingAddress.city,
+          order.shippingAddress.zip,
+          order.shippingAddress.country,
+          ...order.items.map((i) => i.name),
+        ])
+      ),
+    [orders, search]
+  );
 
   const handleStatusChange = async (id: string, status: Order["status"]) => {
     await updateOrderStatus(id, status);
@@ -36,10 +59,18 @@ export default function AdminOrdersPage() {
   return (
     <div>
       <h1 className="font-display text-3xl font-light text-wood-dark mb-2">Bestellungen</h1>
-      <p className="text-stone text-sm mb-8">Auftragsbestätigung und Lieferschein bei Statusänderung</p>
+      <p className="text-stone text-sm mb-6">Auftragsbestätigung und Lieferschein bei Statusänderung</p>
+
+      <AdminSearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Bestellnr., Kunde, E-Mail, Produkt…"
+        resultCount={filteredOrders.length}
+        totalCount={orders.length}
+      />
 
       <div className="space-y-4">
-        {orders.map((order) => (
+        {filteredOrders.map((order) => (
           <div key={order.id} className="bg-cream border border-wood/10 p-6">
             <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
               <div>
@@ -95,8 +126,10 @@ export default function AdminOrdersPage() {
             </div>
           </div>
         ))}
-        {orders.length === 0 && (
-          <p className="text-center text-stone py-12">Noch keine Bestellungen.</p>
+        {filteredOrders.length === 0 && (
+          <p className="text-center text-stone py-12">
+            {search ? "Keine Bestellungen gefunden." : "Noch keine Bestellungen."}
+          </p>
         )}
       </div>
     </div>

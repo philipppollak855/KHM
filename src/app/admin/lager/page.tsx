@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { PackageMinus } from "lucide-react";
 import {
@@ -14,6 +14,8 @@ import { useAuth } from "@/context/AuthContext";
 import { LOW_STOCK_THRESHOLD } from "@/lib/types";
 import type { Product, StockMovement } from "@/lib/types";
 import StockInboundButton from "@/components/admin/StockInboundButton";
+import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import { matchesSearch } from "@/lib/search";
 import Button from "@/components/ui/Button";
 
 const reasonLabels: Record<StockMovement["reason"], string> = {
@@ -30,6 +32,7 @@ export default function AdminInventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [outboundQty, setOutboundQty] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     const [prods, movs] = await Promise.all([
@@ -62,7 +65,15 @@ export default function AdminInventoryPage() {
     await load();
   };
 
-  const lowCount = products.filter(
+  const filteredProducts = useMemo(
+    () =>
+      products.filter((p) =>
+        matchesSearch(search, [p.name, p.description, p.stock, p.slug])
+      ),
+    [products, search]
+  );
+
+  const lowCount = filteredProducts.filter(
     (p) => p.active && p.stock <= LOW_STOCK_THRESHOLD
   ).length;
 
@@ -76,6 +87,14 @@ export default function AdminInventoryPage() {
           Bestände prüfen, nachbestellen und ein- oder ausbuchen
         </p>
       </div>
+
+      <AdminSearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Produkt, Bestand…"
+        resultCount={filteredProducts.length}
+        totalCount={products.length}
+      />
 
       {lowCount > 0 && (
         <div className="bg-red-50 border border-red-200 p-4 text-sm text-red-800">
@@ -95,7 +114,7 @@ export default function AdminInventoryPage() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
+            {filteredProducts.map((p) => (
               <tr key={p.id} className="border-t border-wood/10">
                 <td className="p-4">
                   <Link

@@ -16,7 +16,15 @@ export function getAdminApp(): App | null {
   if (getApps().length > 0) return getApps()[0];
   const serviceAccount = getServiceAccount();
   if (!serviceAccount) return null;
-  return initializeApp({ credential: cert(serviceAccount) });
+  const projectId =
+    serviceAccount.projectId ||
+    (serviceAccount as ServiceAccount & { project_id?: string }).project_id;
+  return initializeApp({
+    credential: cert(serviceAccount),
+    storageBucket:
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+      `${projectId}.firebasestorage.app`,
+  });
 }
 
 export function getAdminAuth() {

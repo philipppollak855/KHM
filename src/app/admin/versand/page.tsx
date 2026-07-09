@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   getShippingZones,
@@ -12,6 +12,8 @@ import {
 import type { ShippingZone } from "@/lib/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import { matchesSearch } from "@/lib/search";
 
 const emptyZone = {
   name: "",
@@ -31,6 +33,7 @@ export default function AdminShippingPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyZone);
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     await seedShippingZones();
@@ -87,6 +90,21 @@ export default function AdminShippingPage() {
     setShowForm(true);
   };
 
+  const filteredZones = useMemo(
+    () =>
+      zones.filter((z) =>
+        matchesSearch(search, [
+          z.name,
+          z.countries.join(" "),
+          z.zipPrefixes?.join(" "),
+          z.zipFrom,
+          z.zipTo,
+          z.baseCost,
+        ])
+      ),
+    [zones, search]
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -98,6 +116,14 @@ export default function AdminShippingPage() {
           <Plus className="w-4 h-4" /> Neue Zone
         </Button>
       </div>
+
+      <AdminSearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Zone, Land, PLZ…"
+        resultCount={filteredZones.length}
+        totalCount={zones.length}
+      />
 
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-cream p-6 border border-wood/10 mb-8 space-y-4">
@@ -126,7 +152,7 @@ export default function AdminShippingPage() {
       )}
 
       <div className="space-y-4">
-        {zones.map((z) => (
+        {filteredZones.map((z) => (
           <div key={z.id} className="bg-cream border border-wood/10 p-5 flex flex-wrap justify-between gap-4">
             <div>
               <p className="font-medium text-wood-dark">{z.name}</p>
@@ -145,6 +171,11 @@ export default function AdminShippingPage() {
             </div>
           </div>
         ))}
+        {filteredZones.length === 0 && (
+          <p className="text-center text-stone py-8">
+            {search ? "Keine Versandzonen gefunden." : "Noch keine Versandzonen."}
+          </p>
+        )}
       </div>
     </div>
   );

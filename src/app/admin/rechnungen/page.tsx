@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getInvoices, updateInvoiceStatus, formatPrice, formatDate } from "@/lib/firestore";
 import { downloadInvoicePdf } from "@/lib/documents/download";
 import type { Invoice } from "@/lib/types";
 import DownloadButton from "@/components/documents/DownloadButton";
+import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import { matchesSearch } from "@/lib/search";
 
 const statusLabels: Record<Invoice["status"], string> = {
   draft: "Entwurf",
@@ -15,12 +17,29 @@ const statusLabels: Record<Invoice["status"], string> = {
 
 export default function AdminInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [search, setSearch] = useState("");
 
   const load = async () => setInvoices(await getInvoices());
 
   useEffect(() => {
     load().catch(console.error);
   }, []);
+
+  const filteredInvoices = useMemo(
+    () =>
+      invoices.filter((inv) =>
+        matchesSearch(search, [
+          inv.invoiceNumber,
+          inv.orderNumber,
+          inv.customerName,
+          inv.customerEmail,
+          statusLabels[inv.status],
+          inv.total,
+          formatPrice(inv.total),
+        ])
+      ),
+    [invoices, search]
+  );
 
   const handleStatusChange = async (id: string, status: Invoice["status"]) => {
     await updateInvoiceStatus(id, status);
@@ -29,7 +48,16 @@ export default function AdminInvoicesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl font-light text-wood-dark mb-8">Rechnungen</h1>
+      <h1 className="font-display text-3xl font-light text-wood-dark mb-2">Rechnungen</h1>
+      <p className="text-stone text-sm mb-6">Rechnungen verwalten und als PDF herunterladen</p>
+
+      <AdminSearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Rechnungsnr., Bestellnr., Kunde…"
+        resultCount={filteredInvoices.length}
+        totalCount={invoices.length}
+      />
 
       <div className="bg-cream border border-wood/10 overflow-hidden">
         <table className="w-full text-sm">
@@ -45,7 +73,7 @@ export default function AdminInvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {invoices.map((inv) => (
+            {filteredInvoices.map((inv) => (
               <tr key={inv.id} className="border-t border-wood/10">
                 <td className="p-4 font-medium">{inv.invoiceNumber}</td>
                 <td className="p-4">
@@ -74,9 +102,11 @@ export default function AdminInvoicesPage() {
                 </td>
               </tr>
             ))}
-            {invoices.length === 0 && (
+            {filteredInvoices.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-stone">Noch keine Rechnungen.</td>
+                <td colSpan={7} className="p-8 text-center text-stone">
+                  {search ? "Keine Rechnungen gefunden." : "Noch keine Rechnungen."}
+                </td>
               </tr>
             )}
           </tbody>

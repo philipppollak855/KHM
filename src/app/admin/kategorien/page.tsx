@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   getCategories,
@@ -13,11 +13,15 @@ import type { Category } from "@/lib/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
+import ImageUpload from "@/components/ui/ImageUpload";
+import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import { matchesSearch } from "@/lib/search";
 
 const emptyCategory = {
   name: "",
   description: "",
   sortOrder: "0",
+  imageUrl: "",
   active: true,
 };
 
@@ -26,6 +30,7 @@ export default function AdminCategoriesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyCategory);
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     setCategories(await getCategories());
@@ -42,6 +47,7 @@ export default function AdminCategoriesPage() {
       slug: slugify(form.name),
       description: form.description,
       sortOrder: parseInt(form.sortOrder) || 0,
+      imageUrl: form.imageUrl || undefined,
       active: form.active,
     };
 
@@ -62,6 +68,7 @@ export default function AdminCategoriesPage() {
       name: cat.name,
       description: cat.description,
       sortOrder: cat.sortOrder.toString(),
+      imageUrl: cat.imageUrl || "",
       active: cat.active,
     });
     setEditingId(cat.id);
@@ -74,6 +81,14 @@ export default function AdminCategoriesPage() {
       await load();
     }
   };
+
+  const filteredCategories = useMemo(
+    () =>
+      categories.filter((c) =>
+        matchesSearch(search, [c.name, c.description, c.slug, c.sortOrder])
+      ),
+    [categories, search]
+  );
 
   return (
     <div>
@@ -91,6 +106,14 @@ export default function AdminCategoriesPage() {
           <Plus className="w-4 h-4" /> Neue Kategorie
         </Button>
       </div>
+
+      <AdminSearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Kategorie, Beschreibung…"
+        resultCount={filteredCategories.length}
+        totalCount={categories.length}
+      />
 
       {showForm && (
         <form
@@ -110,6 +133,12 @@ export default function AdminCategoriesPage() {
             label="Beschreibung"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+          <ImageUpload
+            folder="categories"
+            label="Kategoriebild"
+            value={form.imageUrl}
+            onChange={(url) => setForm({ ...form, imageUrl: url })}
           />
           <Input
             label="Sortierung"
@@ -152,7 +181,7 @@ export default function AdminCategoriesPage() {
             </tr>
           </thead>
           <tbody>
-            {categories.map((c) => (
+            {filteredCategories.map((c) => (
               <tr key={c.id} className="border-t border-wood/10">
                 <td className="p-4 font-medium">{c.name}</td>
                 <td className="p-4 text-wood/60 max-w-xs truncate">
@@ -186,10 +215,10 @@ export default function AdminCategoriesPage() {
                 </td>
               </tr>
             ))}
-            {categories.length === 0 && (
+            {filteredCategories.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-8 text-center text-wood/60">
-                  Noch keine Kategorien vorhanden.
+                  {search ? "Keine Kategorien gefunden." : "Noch keine Kategorien vorhanden."}
                 </td>
               </tr>
             )}

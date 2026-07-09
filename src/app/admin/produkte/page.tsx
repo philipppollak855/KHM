@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import { Plus, Pencil, Trash2, PackageMinus } from "lucide-react";
 import {
   getProducts,
@@ -14,6 +15,8 @@ import {
 import { adjustProductStock } from "@/lib/inventory";
 import { useAuth } from "@/context/AuthContext";
 import StockInboundButton from "@/components/admin/StockInboundButton";
+import AdminSearchBar from "@/components/admin/AdminSearchBar";
+import { matchesSearch } from "@/lib/search";
 import type { Product, Category } from "@/lib/types";
 import { calculateSellingPrice, TAX_RATES_AT } from "@/lib/pricing";
 import Button from "@/components/ui/Button";
@@ -45,6 +48,27 @@ export default function AdminProductsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyProduct);
   const [stockAdjust, setStockAdjust] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories]
+  );
+
+  const filteredProducts = useMemo(
+    () =>
+      products.filter((p) =>
+        matchesSearch(search, [
+          p.name,
+          p.description,
+          p.slug,
+          categoryMap.get(p.categoryId),
+          p.stock,
+          formatPrice(p.price),
+        ])
+      ),
+    [products, search, categoryMap]
+  );
 
   const load = async () => {
     const [prods, cats] = await Promise.all([getProducts(), getCategories()]);
@@ -160,6 +184,14 @@ export default function AdminProductsPage() {
           <Plus className="w-4 h-4" /> Neues Produkt
         </Button>
       </div>
+
+      <AdminSearchBar
+        value={search}
+        onChange={setSearch}
+        placeholder="Produkt, Kategorie, Beschreibung…"
+        resultCount={filteredProducts.length}
+        totalCount={products.length}
+      />
 
       {showForm && (
         <form
@@ -303,6 +335,7 @@ export default function AdminProductsPage() {
         <table className="w-full text-sm">
           <thead className="bg-wood/5">
             <tr>
+              <th className="text-left p-4 font-medium text-wood-dark">Bild</th>
               <th className="text-left p-4 font-medium text-wood-dark">Name</th>
               <th className="text-left p-4 font-medium text-wood-dark">Preis</th>
               <th className="text-left p-4 font-medium text-wood-dark">Lager</th>
@@ -312,8 +345,25 @@ export default function AdminProductsPage() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
+            {filteredProducts.map((p) => (
               <tr key={p.id} className="border-t border-wood/10">
+                <td className="p-4">
+                  <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-wood/5 border border-wood/10">
+                    {p.imageUrl ? (
+                      <Image
+                        src={p.imageUrl}
+                        alt={p.name}
+                        fill
+                        className="object-cover"
+                        unoptimized={p.imageUrl.includes("firebasestorage")}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-stone">
+                        –
+                      </div>
+                    )}
+                  </div>
+                </td>
                 <td className="p-4 font-medium">{p.name}</td>
                 <td className="p-4">{formatPrice(p.price)}</td>
                 <td className="p-4">
@@ -378,10 +428,10 @@ export default function AdminProductsPage() {
                 </td>
               </tr>
             ))}
-            {products.length === 0 && (
+            {filteredProducts.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-wood/60">
-                  Noch keine Produkte vorhanden.
+                <td colSpan={8} className="p-8 text-center text-wood/60">
+                  {search ? "Keine Produkte gefunden." : "Noch keine Produkte vorhanden."}
                 </td>
               </tr>
             )}
