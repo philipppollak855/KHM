@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Home, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSwipePages } from "@/hooks/useSwipePages";
-import { usePrefersDarkMode } from "@/hooks/usePrefersDarkMode";
+import { usePwaLauncherTheme } from "@/hooks/usePwaLauncherTheme";
 import { usePwaLauncherBadges } from "@/hooks/usePwaLauncherBadges";
 import PwaBottomNav from "@/components/pwa/PwaBottomNav";
 import CompanyLogo from "@/components/branding/CompanyLogo";
@@ -86,7 +86,7 @@ function formatDate(date: Date) {
 export default function PwaLauncher() {
   const { logout, canRead } = useAuth();
   const { company } = useCompanyBranding();
-  const isDark = usePrefersDarkMode();
+  const { isDark } = usePwaLauncherTheme();
   const badges = usePwaLauncherBadges(canRead);
   usePwaBottomNavInset(true);
   const [now, setNow] = useState(() => new Date());

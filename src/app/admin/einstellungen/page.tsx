@@ -5,12 +5,15 @@ import { getCompanySettings, saveCompanySettings } from "@/lib/firestore";
 import { DEFAULT_COMPANY } from "@/lib/company";
 import type { CompanySettings } from "@/lib/types";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
+import { usePwaLauncherTheme } from "@/hooks/usePwaLauncherTheme";
+import { PWA_THEME_LABELS, type PwaThemeMode } from "@/lib/pwa-theme";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import ImageUpload from "@/components/ui/ImageUpload";
 
 export default function AdminSettingsPage() {
   const { refreshCompany } = useCompanyBranding();
+  const { mode: pwaTheme, setMode: setPwaTheme } = usePwaLauncherTheme();
   const [form, setForm] = useState<CompanySettings>(DEFAULT_COMPANY);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -69,6 +72,37 @@ export default function AdminSettingsPage() {
             value={form.pwaIconUrl || ""}
             onChange={(pwaIconUrl) => setForm({ ...form, pwaIconUrl })}
           />
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="font-display text-lg text-wood-dark">PWA Startbildschirm</h2>
+          <p className="text-sm text-stone leading-relaxed">
+            Erscheinungsbild des Admin-Startbildschirms auf diesem Gerät. Bei
+            „System" wird die Geräte-Einstellung verwendet — in installierten
+            Apps funktioniert das nicht immer zuverlässig.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {(["system", "light", "dark"] as PwaThemeMode[]).map((value) => (
+              <label
+                key={value}
+                className={`flex cursor-pointer items-center justify-center rounded-xl border px-4 py-3 text-sm transition-colors ${
+                  pwaTheme === value
+                    ? "border-forest bg-forest/5 text-forest font-medium"
+                    : "border-wood/15 bg-linen text-wood-dark hover:border-wood/30"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="pwaTheme"
+                  value={value}
+                  checked={pwaTheme === value}
+                  onChange={() => setPwaTheme(value)}
+                  className="sr-only"
+                />
+                {PWA_THEME_LABELS[value]}
+              </label>
+            ))}
+          </div>
         </section>
 
         <section className="space-y-4">
