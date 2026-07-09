@@ -19,34 +19,14 @@ import AdminSearchBar from "@/components/admin/AdminSearchBar";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminDataTable from "@/components/admin/AdminDataTable";
 import { matchesSearch } from "@/lib/search";
-import type { Product, Category, ProductVariant } from "@/lib/types";
-import { calculateSellingPrice, TAX_RATES_AT } from "@/lib/pricing";
+import type { Product, Category } from "@/lib/types";
+import { calculateSellingPrice } from "@/lib/pricing";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import Textarea from "@/components/ui/Textarea";
-import ImageUpload from "@/components/ui/ImageUpload";
-import ImageListUpload from "@/components/admin/ImageListUpload";
-import ProductVariantEditor from "@/components/admin/ProductVariantEditor";
+import ProductFormPanel, {
+  emptyProductForm,
+  type ProductFormState,
+} from "@/components/admin/ProductFormPanel";
 import { syncProductAggregates } from "@/lib/product-variants";
-
-const emptyProduct = {
-  name: "",
-  description: "",
-  price: "",
-  costPrice: "",
-  markupPercent: "",
-  markupFixed: "",
-  priceMode: "manual" as "manual" | "calculated",
-  taxRate: "20",
-  categoryId: "",
-  stock: "",
-  imageUrl: "",
-  galleryImages: [] as string[],
-  hasVariants: false,
-  variants: [] as ProductVariant[],
-  active: true,
-  featured: false,
-};
 
 export default function AdminProductsPage() {
   const { user } = useAuth();
@@ -54,7 +34,8 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyProduct);
+  const [form, setForm] = useState<ProductFormState>(emptyProductForm);
+  const [saving, setSaving] = useState(false);
   const [stockAdjust, setStockAdjust] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
 
@@ -88,60 +69,71 @@ export default function AdminProductsPage() {
     load().catch(console.error);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cost = parseFloat(form.costPrice) || 0;
-    const markupPercent = parseFloat(form.markupPercent) || 0;
-    const markupFixed = parseFloat(form.markupFixed) || 0;
-    const variants = form.hasVariants
-      ? form.variants.map((variant, index) => ({
-          ...variant,
-          sortOrder: index,
-          imageUrl: variant.imageUrl || undefined,
-        }))
-      : [];
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      const cost = parseFloat(form.costPrice) || 0;
+      const markupPercent = parseFloat(form.markupPercent) || 0;
+      const markupFixed = parseFloat(form.markupFixed) || 0;
+      const variants = form.hasVariants
+        ? form.variants.map((variant, index) => ({
+            ...variant,
+            sortOrder: index,
+            imageUrl: variant.imageUrl || undefined,
+          }))
+        : [];
 
-    const aggregates =
-      form.hasVariants && variants.length > 0
-        ? syncProductAggregates(variants)
-        : {
-            price:
-              form.priceMode === "calculated" && cost > 0
-                ? calculateSellingPrice(cost, markupPercent, markupFixed)
-                : parseFloat(form.price),
-            stock: parseInt(form.stock, 10) || 0,
-          };
+      const aggregates =
+        form.hasVariants && variants.length > 0
+          ? syncProductAggregates(variants)
+          : {
+              price:
+                form.priceMode === "calculated" && cost > 0
+                  ? calculateSellingPrice(cost, markupPercent, markupFixed)
+                  : parseFloat(form.price),
+              stock: parseInt(form.stock, 10) || 0,
+            };
 
-    const data = {
-      name: form.name,
-      slug: slugify(form.name),
-      description: form.description,
-      price: aggregates.price,
-      costPrice: cost || undefined,
-      markupPercent: markupPercent || undefined,
-      markupFixed: markupFixed || undefined,
-      priceMode: form.priceMode,
-      taxRate: parseFloat(form.taxRate) || 20,
-      categoryId: form.categoryId,
-      stock: aggregates.stock,
-      imageUrl: form.imageUrl || undefined,
-      galleryImages: form.galleryImages.length ? form.galleryImages : undefined,
-      hasVariants: form.hasVariants && variants.length > 0,
-      variants: form.hasVariants && variants.length > 0 ? variants : undefined,
-      active: form.active,
-      featured: form.featured,
-    };
+      const data = {
+        name: form.name,
+        slug: slugify(form.name),
+        description: form.description,
+        price: aggregates.price,
+        costPrice: cost || undefined,
+        markupPercent: markupPercent || undefined,
+        markupFixed: markupFixed || undefined,
+        priceMode: form.priceMode,
+        taxRate: parseFloat(form.taxRate) || 20,
+        categoryId: form.categoryId,
+        stock: aggregates.stock,
+        imageUrl: form.imageUrl || undefined,
+        galleryImages: form.galleryImages.length ? form.galleryImages : undefined,
+        hasVariants: form.hasVariants && variants.length > 0,
+        variants: form.hasVariants && variants.length > 0 ? variants : undefined,
+        active: form.active,
+        featured: form.featured,
+      };
 
-    if (editingId) {
-      await updateProduct(editingId, data);
-    } else {
-      await createProduct(data);
+      if (editingId) {
+        await updateProduct(editingId, data);
+      } else {
+        await createProduct(data);
+      }
+
+      setShowForm(false);
+      setEditingId(null);
+      setForm(emptyProductForm);
+      await load();
+    } finally {
+      setSaving(false);
     }
+  };
 
+  const closeForm = () => {
+    if (saving) return;
     setShowForm(false);
     setEditingId(null);
-    setForm(emptyProduct);
-    await load();
+    setForm(emptyProductForm);
   };
 
   const handleEdit = (product: Product) => {
@@ -208,7 +200,7 @@ export default function AdminProductsPage() {
           onClick={() => {
             setShowForm(true);
             setEditingId(null);
-            setForm(emptyProduct);
+            setForm(emptyProductForm);
           }}
         >
           <Plus className="w-4 h-4" /> Neues Produkt
@@ -223,179 +215,16 @@ export default function AdminProductsPage() {
         totalCount={products.length}
       />
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="bg-cream rounded-2xl p-4 sm:p-6 border border-wood/10 shadow-sm mb-6 sm:mb-8 space-y-4 min-w-0"
-        >
-          <h2 className="font-display text-xl font-semibold">
-            {editingId ? "Produkt bearbeiten" : "Neues Produkt"}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-            <Input
-              label="Verkaufspreis (€, brutto)"
-              type="number"
-              step="0.01"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value, priceMode: "manual" })}
-              required={form.priceMode === "manual"}
-              disabled={
-                (form.hasVariants && form.variants.length > 0) ||
-                form.priceMode === "calculated"
-              }
-            />
-            <Input
-              label="Einkaufspreis (€)"
-              type="number"
-              step="0.01"
-              value={form.costPrice}
-              onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
-            />
-            <Input
-              label="Aufschlag (%)"
-              type="number"
-              step="0.1"
-              value={form.markupPercent}
-              onChange={(e) => setForm({ ...form, markupPercent: e.target.value })}
-            />
-            <Input
-              label="Aufschlag (€ fest)"
-              type="number"
-              step="0.01"
-              value={form.markupFixed}
-              onChange={(e) => setForm({ ...form, markupFixed: e.target.value })}
-            />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-wood-dark">Preisberechnung</label>
-              <select
-                value={form.priceMode}
-                onChange={(e) => setForm({ ...form, priceMode: e.target.value as "manual" | "calculated" })}
-                className="w-full rounded-lg border-2 border-wood/20 bg-cream px-4 py-2.5"
-              >
-                <option value="manual">Manueller Verkaufspreis</option>
-                <option value="calculated">Aus EK + Aufschlag berechnen</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-wood-dark">USt.-Satz</label>
-              <select
-                value={form.taxRate}
-                onChange={(e) => setForm({ ...form, taxRate: e.target.value })}
-                className="w-full rounded-lg border-2 border-wood/20 bg-cream px-4 py-2.5"
-              >
-                {TAX_RATES_AT.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-wood-dark">Kategorie</label>
-              <select
-                value={form.categoryId}
-                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-                className="w-full rounded-lg border-2 border-wood/20 bg-cream px-4 py-2.5"
-                required
-              >
-                <option value="">Kategorie wählen</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Input
-              label="Lagerbestand"
-              type="number"
-              value={form.stock}
-              onChange={(e) => setForm({ ...form, stock: e.target.value })}
-              disabled={form.hasVariants}
-            />
-          </div>
-          <ImageUpload
-            value={form.imageUrl}
-            onChange={(url) => setForm({ ...form, imageUrl: url })}
-            folder="products"
-            label="Hauptbild"
-          />
-          <ImageListUpload
-            label="Zusätzliche Galeriebilder"
-            hint="Für Landingpage und Produktdetail – per Wischen durchblättern."
-            images={form.galleryImages}
-            onChange={(galleryImages) => setForm({ ...form, galleryImages })}
-          />
-          <div className="rounded-2xl border border-wood/10 bg-cream/60 p-4 space-y-4">
-            <label className="flex items-center gap-2 text-sm font-medium text-wood-dark">
-              <input
-                type="checkbox"
-                checked={form.hasVariants}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    hasVariants: e.target.checked,
-                    variants: e.target.checked && form.variants.length === 0
-                      ? form.variants
-                      : form.variants,
-                  })
-                }
-              />
-              Produkt mit Varianten (eigene Preise, Bilder & Lager)
-            </label>
-            {form.hasVariants && (
-              <ProductVariantEditor
-                variants={form.variants}
-                onChange={(variants) => setForm({ ...form, variants })}
-              />
-            )}
-          </div>
-          <Textarea
-            label="Beschreibung"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            required
-          />
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.active}
-                onChange={(e) => setForm({ ...form, active: e.target.checked })}
-              />
-              Aktiv
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.featured}
-                onChange={(e) => setForm({ ...form, featured: e.target.checked })}
-              />
-              Empfehlung
-            </label>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button type="submit" className="w-full sm:w-auto">
-              {editingId ? "Speichern" : "Erstellen"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                setShowForm(false);
-                setEditingId(null);
-              }}
-            >
-              Abbrechen
-            </Button>
-          </div>
-        </form>
-      )}
+      <ProductFormPanel
+        open={showForm}
+        editingId={editingId}
+        form={form}
+        categories={categories}
+        saving={saving}
+        onChange={setForm}
+        onClose={closeForm}
+        onSubmit={handleSubmit}
+      />
 
       <div className="lg:hidden space-y-3">
         {filteredProducts.map((p) => (
