@@ -1,16 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { LANDING_IMAGES } from "@/lib/marketing-images";
 
 export default function QuoteSection() {
   return (
     <section className="relative py-32 md:py-40 overflow-hidden">
       <Image
-        src="https://images.unsplash.com/photo-1518176258769-f227c798150e?w=1920&q=80"
+        src={LANDING_IMAGES.quoteNature}
         alt="Naturdetail"
         fill
         className="object-cover"
         sizes="100vw"
+        unoptimized
       />
       <div className="absolute inset-0 bg-wood-dark/80" />
 

@@ -1,18 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ChevronDown } from "lucide-react";
+import { LANDING_IMAGES } from "@/lib/marketing-images";
 
 export default function HeroSection() {
   return (
     <section className="relative min-h-[calc(92vh-5rem)] flex items-center overflow-hidden -mt-20">
       {/* Background */}
       <Image
-        src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=85"
+        src={LANDING_IMAGES.heroForest}
         alt="Wald im Schneebergland"
         fill
         priority
         className="object-cover scale-105"
         sizes="100vw"
+        unoptimized
       />
       <div className="absolute inset-0 hero-gradient" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(184,149,108,0.08)_0%,transparent_50%)]" />

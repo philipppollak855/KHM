@@ -8,13 +8,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { slugify } from "./firestore";
-
-const SAMPLE_IMAGE =
-  "?w=600&q=80&auto=format&fit=crop" as const;
-
-function sampleImage(photoId: string) {
-  return `https://images.unsplash.com/${photoId}${SAMPLE_IMAGE}`;
-}
+import { getSampleProductImage } from "./marketing-images";
 
 const SAMPLE_CATEGORIES = [
   {
@@ -49,7 +43,6 @@ const SAMPLE_PRODUCTS = [
     price: 34.9,
     stock: 12,
     featured: true,
-    imageUrl: sampleImage("photo-1651589822716-2bb531112b8a"),
   },
   {
     categorySlug: "holzprodukte",
@@ -59,7 +52,6 @@ const SAMPLE_PRODUCTS = [
     price: 49.9,
     stock: 8,
     featured: true,
-    imageUrl: sampleImage("photo-1594040226829-7f251ab46d80"),
   },
   {
     categorySlug: "holzprodukte",
@@ -69,7 +61,6 @@ const SAMPLE_PRODUCTS = [
     price: 12.5,
     stock: 25,
     featured: false,
-    imageUrl: sampleImage("photo-1627820751275-e44b937c5d33"),
   },
   {
     categorySlug: "textilien-filz",
@@ -79,7 +70,6 @@ const SAMPLE_PRODUCTS = [
     price: 38.0,
     stock: 15,
     featured: true,
-    imageUrl: sampleImage("photo-1586023492125-27b2c045efd7"),
   },
   {
     categorySlug: "textilien-filz",
@@ -89,7 +79,6 @@ const SAMPLE_PRODUCTS = [
     price: 22.0,
     stock: 20,
     featured: false,
-    imageUrl: sampleImage("photo-1772110204270-8c88bb0f6251"),
   },
   {
     categorySlug: "textilien-filz",
@@ -99,7 +88,6 @@ const SAMPLE_PRODUCTS = [
     price: 89.0,
     stock: 6,
     featured: false,
-    imageUrl: sampleImage("photo-1631049307264-da0ec9d70304"),
   },
   {
     categorySlug: "dekoration-geschenke",
@@ -109,7 +97,6 @@ const SAMPLE_PRODUCTS = [
     price: 45.0,
     stock: 10,
     featured: true,
-    imageUrl: sampleImage("photo-1543589077-47d81606c1bf"),
   },
   {
     categorySlug: "dekoration-geschenke",
@@ -119,7 +106,6 @@ const SAMPLE_PRODUCTS = [
     price: 28.5,
     stock: 14,
     featured: false,
-    imageUrl: sampleImage("photo-1603006905003-be475563bc59"),
   },
   {
     categorySlug: "dekoration-geschenke",
@@ -129,9 +115,12 @@ const SAMPLE_PRODUCTS = [
     price: 39.9,
     stock: 18,
     featured: true,
-    imageUrl: sampleImage("photo-1544816155-12df9643f363"),
   },
 ];
+
+function imageForProduct(name: string) {
+  return getSampleProductImage(slugify(name));
+}
 
 export async function seedSampleData(): Promise<{
   categories: number;
@@ -168,7 +157,7 @@ export async function seedSampleData(): Promise<{
       price: product.price,
       categoryId,
       stock: product.stock,
-      imageUrl: product.imageUrl,
+      imageUrl: imageForProduct(product.name),
       active: true,
       featured: product.featured,
       taxRate: 20,
@@ -181,10 +170,6 @@ export async function seedSampleData(): Promise<{
 }
 
 export async function refreshSampleProductImages(): Promise<{ updated: number }> {
-  const sampleBySlug = new Map(
-    SAMPLE_PRODUCTS.map((product) => [slugify(product.name), product.imageUrl])
-  );
-
   const productsSnap = await getDocs(collection(db, "products"));
   let updated = 0;
 
@@ -192,7 +177,7 @@ export async function refreshSampleProductImages(): Promise<{ updated: number }>
     const slug = productDoc.data().slug as string | undefined;
     if (!slug) continue;
 
-    const imageUrl = sampleBySlug.get(slug);
+    const imageUrl = getSampleProductImage(slug);
     if (!imageUrl || productDoc.data().imageUrl === imageUrl) continue;
 
     await updateDoc(doc(db, "products", productDoc.id), { imageUrl });

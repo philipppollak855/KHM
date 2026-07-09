@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { LANDING_IMAGES } from "@/lib/marketing-images";
 
 export default function PhilosophySection() {
   return (
@@ -10,11 +11,12 @@ export default function PhilosophySection() {
           <div className="relative">
             <div className="relative aspect-[4/5] overflow-hidden">
               <Image
-                src="https://images.unsplash.com/photo-1456418334949-335f95ebda59?w=800&q=85"
+                src={LANDING_IMAGES.philosophyWorkshop}
                 alt="Handwerkskunst in der Werkstatt"
                 fill
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
+                unoptimized
               />
             </div>
             <div className="absolute -bottom-6 -right-6 w-48 h-48 border border-wheat/30 -z-10 hidden md:block" />

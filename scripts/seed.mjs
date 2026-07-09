@@ -53,14 +53,14 @@ function sampleImage(photoId) {
 
 const SAMPLE_PRODUCTS = [
   { categorySlug: "holzprodukte", name: "Handgedrechselte Holzschale", description: "Schale aus heimischem Ahorn, von Hand gedrechselt.", price: 34.9, stock: 12, featured: true, imageUrl: sampleImage("photo-1651589822716-2bb531112b8a") },
-  { categorySlug: "holzprodukte", name: "Schneidebrett Eiche", description: "Robustes Schneidebrett aus regionaler Eiche.", price: 49.9, stock: 8, featured: true, imageUrl: sampleImage("photo-1594040226829-7f251ab46d80") },
-  { categorySlug: "holzprodukte", name: "Holzherz Anhänger", description: "Herz aus Zirbenholz – duftet angenehm.", price: 12.5, stock: 25, featured: false, imageUrl: sampleImage("photo-1627820751275-e44b937c5d33") },
-  { categorySlug: "textilien-filz", name: "Filz-Sitzkissen rund", description: "Sitzkissen aus 100 % Schafwolle, handgefilzt.", price: 38.0, stock: 15, featured: true, imageUrl: sampleImage("photo-1586023492125-27b2c045efd7") },
-  { categorySlug: "textilien-filz", name: "Filz-Untersetzer Set (4 Stk.)", description: "Vier Untersetzer in Erdtönen, handgefilzt.", price: 22.0, stock: 20, featured: false, imageUrl: sampleImage("photo-1772110204270-8c88bb0f6251") },
-  { categorySlug: "textilien-filz", name: "Wolldecke Schneebergland", description: "Decke aus regionaler Schafwolle, 130 × 180 cm.", price: 89.0, stock: 6, featured: false, imageUrl: sampleImage("photo-1631049307264-da0ec9d70304") },
-  { categorySlug: "dekoration-geschenke", name: "Adventskranz handgebunden", description: "Frisch gebundener Adventskranz aus heimischen Wäldern.", price: 45.0, stock: 10, featured: true, imageUrl: sampleImage("photo-1543589077-47d81606c1bf") },
-  { categorySlug: "dekoration-geschenke", name: "Kerzenhalter aus Treibholz", description: "Kerzenhalter aus Treibholz für Stabkerzen.", price: 28.5, stock: 14, featured: false, imageUrl: sampleImage("photo-1603006905003-be475563bc59") },
-  { categorySlug: "dekoration-geschenke", name: "Geschenkset „Schneebergland“", description: "Geschenkset mit Holzherz, Filz-Untersetzer und Zirben-Anhänger.", price: 39.9, stock: 18, featured: true, imageUrl: sampleImage("photo-1544816155-12df9643f363") },
+  { categorySlug: "holzprodukte", name: "Schneidebrett Eiche", description: "Robustes Schneidebrett aus regionaler Eiche.", price: 49.9, stock: 8, featured: true, imageUrl: sampleImage("photo-1682530016841-2d191010bd1a") },
+  { categorySlug: "holzprodukte", name: "Holzherz Anhänger", description: "Herz aus Zirbenholz – duftet angenehm.", price: 12.5, stock: 25, featured: false, imageUrl: sampleImage("photo-1594323713852-9626155bfd37") },
+  { categorySlug: "textilien-filz", name: "Filz-Sitzkissen rund", description: "Sitzkissen aus 100 % Schafwolle, handgefilzt.", price: 38.0, stock: 15, featured: true, imageUrl: sampleImage("photo-1685122121706-a7d632dec1df") },
+  { categorySlug: "textilien-filz", name: "Filz-Untersetzer Set (4 Stk.)", description: "Vier Untersetzer in Erdtönen, handgefilzt.", price: 22.0, stock: 20, featured: false, imageUrl: sampleImage("photo-1754606581556-f1ce15df35b8") },
+  { categorySlug: "textilien-filz", name: "Wolldecke Schneebergland", description: "Decke aus regionaler Schafwolle, 130 × 180 cm.", price: 89.0, stock: 6, featured: false, imageUrl: sampleImage("photo-1731404247714-f19f610b32d4") },
+  { categorySlug: "dekoration-geschenke", name: "Adventskranz handgebunden", description: "Frisch gebundener Adventskranz aus heimischen Wäldern.", price: 45.0, stock: 10, featured: true, imageUrl: sampleImage("photo-1765724517986-b2f675d0d4a0") },
+  { categorySlug: "dekoration-geschenke", name: "Kerzenhalter aus Treibholz", description: "Kerzenhalter aus Treibholz für Stabkerzen.", price: 28.5, stock: 14, featured: false, imageUrl: sampleImage("photo-1603905179139-db12ab535ca9") },
+  { categorySlug: "dekoration-geschenke", name: "Geschenkset „Schneebergland“", description: "Geschenkset mit Holzherz, Filz-Untersetzer und Zirben-Anhänger.", price: 39.9, stock: 18, featured: true, imageUrl: sampleImage("photo-1639562954961-0aa228b27c62") },
 ];
 
 loadEnv();
