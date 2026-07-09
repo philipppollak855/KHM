@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { getActiveCategories, getActiveProducts, formatPrice } from "@/lib/firestore";
 import { calculateOrderTotals } from "@/lib/pricing";
-import { downloadInvoicePdf, printInvoicePdf } from "@/lib/documents/download";
+import { printInvoicePdf } from "@/lib/documents/download";
 import {
   searchPosCustomers,
   createPosCustomer,
@@ -88,6 +88,7 @@ export default function PosApp() {
   } | null>(null);
   const [cardReference, setCardReference] = useState("");
   const [emailStatus, setEmailStatus] = useState("");
+  const [printStatus, setPrintStatus] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
   const [tempPassword, setTempPassword] = useState<string | null>(null);
@@ -302,10 +303,14 @@ export default function PosApp() {
 
   const handlePrint = async () => {
     if (!saleResult) return;
+    setPrintStatus("Druck wird vorbereitet…");
     try {
       await printInvoicePdf(saleResult.invoiceId);
-    } catch {
-      await downloadInvoicePdf(saleResult.invoiceId);
+      setPrintStatus("Druckdialog geöffnet.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Drucken fehlgeschlagen";
+      setPrintStatus(message);
     }
   };
 
@@ -327,6 +332,7 @@ export default function PosApp() {
     setLinkToAccount(false);
     setCardReference("");
     setEmailStatus("");
+    setPrintStatus("");
     setTempPassword(null);
     setView("catalog");
   };
@@ -364,6 +370,9 @@ export default function PosApp() {
               <Printer className="w-5 h-5" />
               {isCard ? "Kartenbeleg drucken" : "Rechnung drucken"}
             </button>
+            {printStatus && (
+              <p className="text-sm text-linen/70">{printStatus}</p>
+            )}
             {customer.email && (
               <button
                 onClick={handleEmail}

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { getInvoices, formatPrice, formatDate } from "@/lib/firestore";
-import { downloadInvoicePdf } from "@/lib/documents/download";
+import { downloadInvoicePdf, printInvoicePdf } from "@/lib/documents/download";
 import { confirmInvoicePayment, sendInvoiceReminder } from "@/lib/admin-api";
 import type { Invoice, PaymentMethod } from "@/lib/types";
 import DownloadButton from "@/components/documents/DownloadButton";
@@ -190,6 +190,7 @@ export default function AdminInvoicesPage() {
     return (
       <div className={`flex flex-wrap gap-2 ${stacked ? "flex-col sm:flex-row" : "justify-end"}`}>
         <DownloadButton label="PDF" onClick={() => downloadInvoicePdf(inv.id)} />
+        <DownloadButton label="Drucken" onClick={() => printInvoicePdf(inv.id)} />
         {inv.status === "sent" && (
           <>
             <button

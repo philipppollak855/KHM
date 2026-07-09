@@ -225,9 +225,13 @@ export function generateInvoicePdf(invoice: Invoice, company: CompanySettings) {
 
 export function generateInvoicePdfBlob(
   invoice: Invoice,
-  company: CompanySettings
+  company: CompanySettings,
+  options?: { autoPrint?: boolean }
 ): Blob {
   const doc = buildInvoicePdfDocument(invoice, company);
+  if (options?.autoPrint) {
+    doc.autoPrint({ variant: "non-conform" });
+  }
   return doc.output("blob");
 }
 
