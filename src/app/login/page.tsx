@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { getLoginRedirect } from "@/lib/auth-redirect";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layout/PageHeader";
@@ -11,26 +12,40 @@ import PageHeader from "@/components/layout/PageHeader";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/konto";
-  const { login } = useAuth();
+  const explicitRedirect = searchParams.get("redirect");
+  const { login, user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace(getLoginRedirect(user, explicitRedirect));
+    }
+  }, [authLoading, user, explicitRedirect, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-      await login(email, password);
-      router.push(redirect);
+      const loggedInUser = await login(email, password);
+      router.push(getLoginRedirect(loggedInUser, explicitRedirect));
     } catch {
       setError("Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Daten.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading || user) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center text-stone">
+        Weiterleitung…
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-16">

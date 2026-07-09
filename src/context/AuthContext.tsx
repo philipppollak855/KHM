@@ -23,7 +23,7 @@ interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User | null>;
   register: (
     email: string,
     password: string,
@@ -67,8 +67,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+  const login = async (email: string, password: string): Promise<User | null> => {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+    if (!userDoc.exists()) return null;
+
+    const data = userDoc.data();
+    const loggedInUser: User = {
+      id: cred.user.uid,
+      email: cred.user.email || "",
+      displayName: data.displayName || cred.user.displayName || "",
+      role: data.role || "customer",
+      phone: data.phone,
+      address: data.address,
+      createdAt: data.createdAt?.toDate?.() || new Date(),
+    };
+    setUser(loggedInUser);
+    return loggedInUser;
   };
 
   const register = async (
