@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   Package,
@@ -26,8 +26,9 @@ import {
 } from "@/lib/firestore";
 import { seedSampleData } from "@/lib/seed";
 import { LOW_STOCK_THRESHOLD } from "@/lib/types";
-import type { Order, Product, ContactInquiry } from "@/lib/types";
+import type { Order, Product, ContactInquiry, Invoice } from "@/lib/types";
 import StockInboundButton from "@/components/admin/StockInboundButton";
+import OrderBadges from "@/components/admin/OrderBadges";
 import Button from "@/components/ui/Button";
 
 const statusLabels: Record<Order["status"], string> = {
@@ -49,6 +50,7 @@ const inquiryStatusLabels = {
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
   const [stats, setStats] = useState({
@@ -76,6 +78,7 @@ export default function AdminDashboard() {
 
       setProducts(allProducts);
       setOrders(allOrders);
+      setInvoices(invoices);
       setInquiries(allInquiries);
 
       const revenue = invoices
@@ -141,6 +144,11 @@ export default function AdminDashboard() {
   };
 
   const recentOrders = orders.slice(0, 6);
+  const invoiceByOrderId = useMemo(() => {
+    const map = new Map<string, Invoice>();
+    for (const inv of invoices) map.set(inv.orderId, inv);
+    return map;
+  }, [invoices]);
   const recentInquiries = inquiries.slice(0, 5);
   const lowStockProducts = products
     .filter((p) => p.active && p.stock <= LOW_STOCK_THRESHOLD)
@@ -252,17 +260,24 @@ export default function AdminDashboard() {
               <Link
                 key={order.id}
                 href="/admin/bestellungen"
-                className="flex items-center justify-between p-4 hover:bg-wood/5 transition-colors"
+                className="block p-4 hover:bg-wood/5 transition-colors"
               >
-                <div>
-                  <p className="font-medium text-wood-dark">{order.orderNumber}</p>
-                  <p className="text-sm text-stone">
-                    {order.customerName} · {formatDate(order.createdAt)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-forest">{formatPrice(order.total)}</p>
-                  <p className="text-xs text-stone">{statusLabels[order.status]}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-wood-dark">{order.orderNumber}</p>
+                    <p className="text-sm text-stone">
+                      {order.customerName} · {formatDate(order.createdAt)}
+                    </p>
+                    <OrderBadges
+                      order={order}
+                      invoice={invoiceByOrderId.get(order.id)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-medium text-forest">{formatPrice(order.total)}</p>
+                    <p className="text-xs text-stone">{statusLabels[order.status]}</p>
+                  </div>
                 </div>
               </Link>
             ))}

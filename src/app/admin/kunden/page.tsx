@@ -1,27 +1,49 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { getUsers, formatDate } from "@/lib/firestore";
-import type { User } from "@/lib/types";
+import { getUsers, getOrders, getInvoices, formatDate } from "@/lib/firestore";
+import type { Invoice, Order, User } from "@/lib/types";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminDataTable from "@/components/admin/AdminDataTable";
+import CustomerBadges from "@/components/admin/CustomerBadges";
+import { buildCustomerStats } from "@/lib/badges";
 import { matchesSearch } from "@/lib/search";
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<User[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
+  const [badgeFilter, setBadgeFilter] = useState<"all" | "open" | "pos" | "online">("all");
 
   useEffect(() => {
-    getUsers()
-      .then((users) => setCustomers(users.filter((u) => u.role === "customer")))
+    Promise.all([getUsers(), getOrders(), getInvoices()])
+      .then(([users, orderList, invoiceList]) => {
+        setCustomers(users.filter((u) => u.role === "customer"));
+        setOrders(orderList);
+        setInvoices(invoiceList);
+      })
       .catch(console.error);
   }, []);
 
+  const statsByUserId = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof buildCustomerStats>>();
+    for (const customer of customers) {
+      map.set(customer.id, buildCustomerStats(customer.id, orders, invoices));
+    }
+    return map;
+  }, [customers, orders, invoices]);
+
   const filteredCustomers = useMemo(
     () =>
-      customers.filter((c) =>
-        matchesSearch(search, [
+      customers.filter((c) => {
+        const stats = statsByUserId.get(c.id);
+        if (badgeFilter === "open" && !(stats && stats.openInvoiceCount > 0)) return false;
+        if (badgeFilter === "pos" && !(stats && stats.posOrderCount > 0)) return false;
+        if (badgeFilter === "online" && !(stats && stats.onlineOrderCount > 0)) return false;
+
+        return matchesSearch(search, [
           c.displayName,
           c.email,
           c.phone,
@@ -29,14 +51,16 @@ export default function AdminCustomersPage() {
           c.address?.city,
           c.address?.zip,
           c.address?.country,
-        ])
-      ),
-    [customers, search]
+          stats?.orderCount,
+          stats?.openInvoiceCount,
+        ]);
+      }),
+    [customers, search, badgeFilter, statsByUserId]
   );
 
   return (
     <div>
-      <AdminPageHeader title="Kunden" description="Registrierte Kundenkonten" />
+      <AdminPageHeader title="Kunden" description="Registrierte Kundenkonten mit Bestell- und Zahlungsstatus" />
 
       <AdminSearchBar
         value={search}
@@ -46,12 +70,39 @@ export default function AdminCustomersPage() {
         totalCount={customers.length}
       />
 
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { id: "all" as const, label: "Alle" },
+          { id: "pos" as const, label: "POS-Kunden" },
+          { id: "online" as const, label: "Webshop" },
+          { id: "open" as const, label: "Offene Rechnungen" },
+        ].map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setBadgeFilter(id)}
+            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+              badgeFilter === id
+                ? "bg-forest text-linen border-forest"
+                : "bg-linen text-stone border-wood/20 hover:border-forest/30"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="lg:hidden space-y-3">
         {filteredCustomers.map((c) => (
           <article key={c.id} className="bg-cream border border-wood/10 p-4 rounded-lg">
             <p className="font-semibold text-wood-dark">{c.displayName || "–"}</p>
             <p className="text-sm text-stone break-all">{c.email}</p>
-            {c.phone && <p className="text-sm text-stone mt-1">{c.phone}</p>}
+            <CustomerBadges
+              user={c}
+              stats={statsByUserId.get(c.id)}
+              className="mt-3"
+            />
+            {c.phone && <p className="text-sm text-stone mt-2">{c.phone}</p>}
             {c.address && (
               <p className="text-xs text-stone mt-2">
                 {c.address.street}, {c.address.zip} {c.address.city}
@@ -70,34 +121,38 @@ export default function AdminCustomersPage() {
       </div>
 
       <div className="hidden lg:block">
-        <AdminDataTable minWidth="720px">
+        <AdminDataTable minWidth="900px">
           <table className="w-full text-sm">
             <thead className="bg-wood/5">
               <tr>
-                <th className="text-left p-4 font-medium text-wood-dark">Name</th>
-                <th className="text-left p-4 font-medium text-wood-dark">E-Mail</th>
-                <th className="text-left p-4 font-medium text-wood-dark">Telefon</th>
-                <th className="text-left p-4 font-medium text-wood-dark">Adresse</th>
+                <th className="text-left p-4 font-medium text-wood-dark">Kunde</th>
+                <th className="text-left p-4 font-medium text-wood-dark">Kontakt</th>
+                <th className="text-left p-4 font-medium text-wood-dark">Badges</th>
                 <th className="text-left p-4 font-medium text-wood-dark">Registriert</th>
               </tr>
             </thead>
             <tbody>
               {filteredCustomers.map((c) => (
-                <tr key={c.id} className="border-t border-wood/10">
+                <tr key={c.id} className="border-t border-wood/10 align-top">
                   <td className="p-4 font-medium">{c.displayName || "–"}</td>
-                  <td className="p-4">{c.email}</td>
-                  <td className="p-4">{c.phone || "–"}</td>
-                  <td className="p-4 text-stone text-xs">
-                    {c.address
-                      ? `${c.address.street}, ${c.address.zip} ${c.address.city}`
-                      : "–"}
+                  <td className="p-4">
+                    <p>{c.email}</p>
+                    <p className="text-xs text-stone mt-1">{c.phone || "–"}</p>
+                    <p className="text-xs text-stone mt-1">
+                      {c.address
+                        ? `${c.address.street}, ${c.address.zip} ${c.address.city}`
+                        : "Keine Adresse"}
+                    </p>
                   </td>
-                  <td className="p-4">{formatDate(c.createdAt)}</td>
+                  <td className="p-4">
+                    <CustomerBadges user={c} stats={statsByUserId.get(c.id)} />
+                  </td>
+                  <td className="p-4 whitespace-nowrap">{formatDate(c.createdAt)}</td>
                 </tr>
               ))}
               {filteredCustomers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-wood/60">
+                  <td colSpan={4} className="p-8 text-center text-wood/60">
                     {search ? "Keine Kunden gefunden." : "Noch keine Kunden registriert."}
                   </td>
                 </tr>

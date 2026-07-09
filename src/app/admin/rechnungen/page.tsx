@@ -9,6 +9,8 @@ import DownloadButton from "@/components/documents/DownloadButton";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminDataTable from "@/components/admin/AdminDataTable";
+import { AdminBadgeList } from "@/components/admin/AdminBadge";
+import { getInvoiceBadges } from "@/lib/badges";
 import { matchesSearch } from "@/lib/search";
 
 const statusLabels: Record<Invoice["status"], string> = {
@@ -23,8 +25,6 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
   card: "Karte",
   bank_transfer: "Überweisung",
 };
-
-const reminderLabels = ["–", "Erinnerung", "1. Mahnung", "2. Mahnung"];
 
 function InvoiceStatusBadge({ inv }: { inv: Invoice }) {
   const isOverdue = inv.status === "sent" && inv.dueAt < new Date();
@@ -226,11 +226,7 @@ export default function AdminInvoicesPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <InvoiceStatusBadge inv={inv} />
-                    {(inv.reminderLevel || 0) > 0 && (
-                      <span className="text-xs text-stone">
-                        {reminderLabels[inv.reminderLevel || 0]}
-                      </span>
-                    )}
+                    <AdminBadgeList badges={getInvoiceBadges(inv)} />
                   </div>
                   {renderActions(inv, true)}
                 </article>
@@ -279,11 +275,7 @@ export default function AdminInvoicesPage() {
                         </td>
                         <td className="p-4">
                           <InvoiceStatusBadge inv={inv} />
-                          {(inv.reminderLevel || 0) > 0 && (
-                            <p className="text-xs text-stone mt-1">
-                              {reminderLabels[inv.reminderLevel || 0]}
-                            </p>
-                          )}
+                          <AdminBadgeList badges={getInvoiceBadges(inv)} className="mt-2" />
                         </td>
                         <td className="p-4 text-right">{renderActions(inv)}</td>
                       </tr>

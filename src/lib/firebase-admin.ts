@@ -2,11 +2,27 @@ import { initializeApp, getApps, cert, type App, type ServiceAccount } from "fir
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
+function normalizePrivateKey(key: string) {
+  return key.includes("\\n") ? key.replace(/\\n/g, "\n") : key;
+}
+
 function getServiceAccount(): ServiceAccount | null {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as ServiceAccount;
+    let parsed: unknown = JSON.parse(raw);
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(parsed);
+    }
+    if (!parsed || typeof parsed !== "object") return null;
+    const account = parsed as ServiceAccount & {
+      project_id?: string;
+      private_key?: string;
+    };
+    if (account.private_key) {
+      account.private_key = normalizePrivateKey(account.private_key);
+    }
+    return account;
   } catch {
     return null;
   }
