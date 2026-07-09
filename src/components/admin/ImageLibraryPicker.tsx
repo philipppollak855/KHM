@@ -19,15 +19,24 @@ export default function ImageLibraryPicker({
   const [results, setResults] = useState<ImageLibraryResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [searched, setSearched] = useState(false);
 
   const search = useCallback(async (searchQuery: string) => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setError("Bitte einen Suchbegriff eingeben.");
+      setResults([]);
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setSearched(true);
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error("Nicht angemeldet.");
 
-      const params = new URLSearchParams({ q: searchQuery });
+      const params = new URLSearchParams({ q: trimmed });
       const res = await fetch(`/api/admin/image-search?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -49,8 +58,16 @@ export default function ImageLibraryPicker({
   useEffect(() => {
     const nextQuery = buildImageSearchQuery(initialQuery);
     setQuery(nextQuery);
-    void search(nextQuery);
+    if (nextQuery.trim()) {
+      void search(nextQuery);
+    }
   }, [initialQuery, search]);
+
+  const handleSearchClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    void search(query);
+  };
 
   return (
     <div className="rounded-xl border border-wood/15 bg-linen/50 p-3 sm:p-4 space-y-3">
@@ -59,27 +76,29 @@ export default function ImageLibraryPicker({
         <div className="min-w-0">
           <p className="text-sm font-medium text-wood-dark">Internet-Bibliothek</p>
           <p className="text-xs text-stone mt-0.5">
-            Passende lizenzfreie Bilder zum Titel – ein Tipp genügt.
+            Lizenzfreie Bilder von Openverse, Wikimedia &amp; Unsplash – per Link eingefügt.
           </p>
         </div>
       </div>
 
-      <form
-        className="flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void search(query);
-        }}
-      >
+      <div className="flex gap-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              void search(query);
+            }
+          }}
           placeholder="Suchbegriff…"
           className="min-w-0 flex-1 rounded-lg border-2 border-wood/20 bg-cream px-3 py-2 text-sm text-wood-dark"
         />
         <button
-          type="submit"
+          type="button"
           disabled={loading}
+          onClick={handleSearchClick}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-forest px-3 py-2 text-sm text-cream disabled:opacity-50"
         >
           {loading ? (
@@ -89,11 +108,11 @@ export default function ImageLibraryPicker({
           )}
           Suchen
         </button>
-      </form>
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {!loading && !error && results.length === 0 && (
+      {searched && !loading && !error && results.length === 0 && (
         <p className="text-sm text-stone">Keine passenden Bilder gefunden.</p>
       )}
 
@@ -103,7 +122,11 @@ export default function ImageLibraryPicker({
             <button
               key={item.id}
               type="button"
-              onClick={() => onSelect(item.url)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onSelect(item.url);
+              }}
               className="group overflow-hidden rounded-lg border border-wood/15 bg-cream text-left hover:border-forest hover:ring-2 hover:ring-forest/20"
             >
               <div className="relative aspect-square overflow-hidden bg-wood/5">
