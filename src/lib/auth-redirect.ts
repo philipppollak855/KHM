@@ -1,4 +1,5 @@
 import type { User } from "@/lib/types";
+import { canAccessAdminArea } from "@/lib/permissions";
 
 export function getAdminHomePath(options?: { pwa?: boolean }): string {
   return options?.pwa ? "/admin/start" : "/admin";
@@ -10,7 +11,7 @@ export function getLoginRedirect(
   options?: { pwa?: boolean }
 ): string {
   if (explicitRedirect) return explicitRedirect;
-  if (user?.role === "admin") {
+  if (canAccessAdminArea(user)) {
     return getAdminHomePath(options);
   }
   return "/konto";

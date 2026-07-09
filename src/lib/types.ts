@@ -1,4 +1,29 @@
-export type UserRole = "customer" | "admin";
+export type UserRole = "customer" | "admin" | "team";
+
+export type PermissionModule =
+  | "dashboard"
+  | "pos"
+  | "orders"
+  | "customers"
+  | "contactInquiries"
+  | "invoices"
+  | "dunning"
+  | "products"
+  | "categories"
+  | "inventory"
+  | "shipping"
+  | "settings"
+  | "team";
+
+export interface ModulePermission {
+  read: boolean;
+  write: boolean;
+}
+
+export type TeamPermissions = Record<
+  Exclude<PermissionModule, "team">,
+  ModulePermission
+>;
 
 export interface User {
   id: string;
@@ -7,6 +32,8 @@ export interface User {
   role: UserRole;
   phone?: string;
   address?: Address;
+  permissions?: TeamPermissions;
+  active?: boolean;
   createdAt: Date;
 }
 
@@ -29,6 +56,16 @@ export interface Category {
 
 export type PriceMode = "manual" | "calculated";
 
+export interface ProductVariant {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  imageUrl?: string;
+  active: boolean;
+  sortOrder?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -42,6 +79,9 @@ export interface Product {
   taxRate: number;
   categoryId: string;
   imageUrl?: string;
+  galleryImages?: string[];
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
   stock: number;
   active: boolean;
   featured: boolean;
@@ -50,7 +90,9 @@ export interface Product {
 
 export interface CartItem {
   productId: string;
+  variantId?: string;
   name: string;
+  variantName?: string;
   price: number;
   quantity: number;
   taxRate: number;
@@ -73,6 +115,7 @@ export type PaymentSource = "automatic" | "manual";
 
 export interface OrderItem {
   productId: string;
+  variantId?: string;
   name: string;
   price: number;
   quantity: number;
@@ -266,7 +309,9 @@ export interface PosCustomer {
 
 export interface PosCartItem {
   productId: string;
+  variantId?: string;
   name: string;
+  variantName?: string;
   price: number;
   quantity: number;
   taxRate: number;

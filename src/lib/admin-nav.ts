@@ -11,8 +11,11 @@ import {
   Boxes,
   Truck,
   Settings,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
+import type { PermissionModule } from "@/lib/types";
+import { getModuleForPath } from "@/lib/permissions";
 
 export interface AdminNavLink {
   href: string;
@@ -69,6 +72,7 @@ export const adminNavHubs: AdminNavEntry[] = [
       { href: "/admin/lager", icon: Boxes, label: "Lager" },
       { href: "/admin/versand", icon: Truck, label: "Versand" },
       { href: "/admin/einstellungen", icon: Settings, label: "Firma & Shop" },
+      { href: "/admin/team", icon: UserCog, label: "Team & Rechte" },
     ],
   },
 ];
@@ -128,4 +132,27 @@ export function getCurrentNavHubLabel(pathname: string): string | undefined {
     }
   }
   return undefined;
+}
+
+export function filterAdminNavEntries(
+  entries: AdminNavEntry[],
+  canRead: (module: PermissionModule) => boolean
+): AdminNavEntry[] {
+  return entries
+    .map((entry) => {
+      if (entry.type === "link") {
+        const module = getModuleForPath(entry.href);
+        if (module && !canRead(module)) return null;
+        return entry;
+      }
+
+      const items = entry.items.filter((item) => {
+        const module = getModuleForPath(item.href);
+        return !module || canRead(module);
+      });
+
+      if (items.length === 0) return null;
+      return { ...entry, items };
+    })
+    .filter((entry): entry is AdminNavEntry => entry !== null);
 }

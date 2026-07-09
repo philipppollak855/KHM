@@ -1,6 +1,15 @@
 import { calculateSellingPrice, roundCurrency } from "@/lib/pricing";
 import type { CartItem } from "@/lib/types";
 
+type VariantData = {
+  id: string;
+  name?: string;
+  price?: number;
+  stock?: number;
+  imageUrl?: string;
+  active?: boolean;
+};
+
 type ProductData = {
   name?: string;
   price?: number;
@@ -11,6 +20,9 @@ type ProductData = {
   taxRate?: number;
   active?: boolean;
   stock?: number;
+  imageUrl?: string;
+  hasVariants?: boolean;
+  variants?: VariantData[];
 };
 
 export function resolveProductUnitPrice(data: ProductData): number {
@@ -23,6 +35,17 @@ export function resolveProductUnitPrice(data: ProductData): number {
     );
   }
   return roundCurrency((data.price as number) ?? 0);
+}
+
+function resolveVariant(data: ProductData, variantId: string): VariantData {
+  const variant = data.variants?.find((row) => row.id === variantId);
+  if (!variant) {
+    throw new Error(`Variante für „${data.name || "Produkt"}“ nicht gefunden.`);
+  }
+  if (variant.active === false) {
+    throw new Error(`Variante „${variant.name || variantId}“ ist nicht aktiv.`);
+  }
+  return variant;
 }
 
 export async function resolveCartItemsServer(
@@ -52,6 +75,33 @@ export async function resolveCartItemsServer(
       throw new Error(`Produkt „${data.name || item.name}“ ist nicht aktiv.`);
     }
 
+    if (data.hasVariants) {
+      if (!item.variantId) {
+        throw new Error(`Bitte Variante für „${data.name || item.name}“ wählen.`);
+      }
+
+      const variant = resolveVariant(data, item.variantId);
+      const price = roundCurrency((variant.price as number) ?? 0);
+      if (price <= 0) {
+        throw new Error(
+          `Variante „${variant.name || item.variantName}“ hat keinen gültigen Preis.`
+        );
+      }
+
+      resolved.push({
+        productId: item.productId,
+        variantId: item.variantId,
+        name: (data.name as string) || item.name,
+        variantName: (variant.name as string) || item.variantName,
+        price,
+        quantity: item.quantity,
+        taxRate: (data.taxRate as number) ?? 20,
+        imageUrl: (variant.imageUrl as string) || item.imageUrl,
+        maxStock: (variant.stock as number) ?? 0,
+      });
+      continue;
+    }
+
     const price = resolveProductUnitPrice(data);
     if (price <= 0) {
       throw new Error(`Produkt „${data.name || item.name}“ hat keinen gültigen Preis.`);
@@ -63,7 +113,7 @@ export async function resolveCartItemsServer(
       price,
       quantity: item.quantity,
       taxRate: (data.taxRate as number) ?? 20,
-      imageUrl: item.imageUrl,
+      imageUrl: (data.imageUrl as string) || item.imageUrl,
       maxStock: (data.stock as number) ?? 0,
     });
   }

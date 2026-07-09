@@ -34,6 +34,12 @@ import {
 import type { Category, Product, PosCartItem, PosCustomer, PaymentMethod } from "@/lib/types";
 import type { Address } from "@/lib/types";
 import { POS_WALK_IN_UI_LABEL } from "@/lib/customer-display";
+import {
+  getActiveVariants,
+  getCartLineKey,
+  getProductListStock,
+  productHasVariants,
+} from "@/lib/product-variants";
 
 type View = "catalog" | "checkout" | "card_pending" | "success";
 
@@ -93,6 +99,7 @@ export default function PosApp() {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     if (prevViewRef.current === "success" && view !== "success") {
@@ -140,25 +147,72 @@ export default function PosApp() {
 
   const cartItems = cart.map((c) => ({
     productId: c.productId,
+    variantId: c.variantId,
     name: c.name,
+    variantName: c.variantName,
     price: c.price,
     quantity: c.quantity,
     taxRate: c.taxRate,
     imageUrl: c.imageUrl,
   }));
 
+  const getPosLineKey = (item: PosCartItem) =>
+    getCartLineKey(item.productId, item.variantId);
+
   const totals = calculateOrderTotals(cartItems, 0);
   const itemCount = cart.reduce((s, i) => s + i.quantity, 0);
 
+  const addVariantToCart = (
+    product: Product,
+    variant: { id: string; name: string; price: number; stock: number; imageUrl?: string }
+  ) => {
+    if (variant.stock <= 0) return;
+    const lineKey = getCartLineKey(product.id, variant.id);
+    setCart((prev) => {
+      const existing = prev.find((item) => getPosLineKey(item) === lineKey);
+      if (existing) {
+        const next = Math.min(existing.quantity + 1, variant.stock);
+        if (next <= existing.quantity) return prev;
+        return prev.map((item) =>
+          getPosLineKey(item) === lineKey
+            ? { ...item, quantity: next, maxStock: variant.stock }
+            : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          variantId: variant.id,
+          name: product.name,
+          variantName: variant.name,
+          price: variant.price,
+          quantity: 1,
+          taxRate: product.taxRate ?? 20,
+          imageUrl: variant.imageUrl || product.imageUrl,
+          maxStock: variant.stock,
+        },
+      ];
+    });
+    setVariantPickerProduct(null);
+  };
+
   const addToCart = (product: Product) => {
+    if (productHasVariants(product)) {
+      setVariantPickerProduct(product);
+      return;
+    }
     if (product.stock <= 0) return;
     setCart((prev) => {
-      const existing = prev.find((i) => i.productId === product.id);
+      const lineKey = getCartLineKey(product.id);
+      const existing = prev.find((item) => getPosLineKey(item) === lineKey);
       if (existing) {
         const next = Math.min(existing.quantity + 1, product.stock);
         if (next <= existing.quantity) return prev;
-        return prev.map((i) =>
-          i.productId === product.id ? { ...i, quantity: next, maxStock: product.stock } : i
+        return prev.map((item) =>
+          getPosLineKey(item) === lineKey
+            ? { ...item, quantity: next, maxStock: product.stock }
+            : item
         );
       }
       return [
@@ -176,15 +230,15 @@ export default function PosApp() {
     });
   };
 
-  const updateQty = (productId: string, delta: number) => {
+  const updateQty = (lineKey: string, delta: number) => {
     setCart((prev) =>
       prev
-        .map((i) => {
-          if (i.productId !== productId) return i;
-          const next = Math.min(Math.max(1, i.quantity + delta), i.maxStock);
-          return { ...i, quantity: next };
+        .map((item) => {
+          if (getPosLineKey(item) !== lineKey) return item;
+          const next = Math.min(Math.max(1, item.quantity + delta), item.maxStock);
+          return { ...item, quantity: next };
         })
-        .filter((i) => i.quantity > 0)
+        .filter((item) => item.quantity > 0)
     );
   };
 
@@ -548,12 +602,17 @@ export default function PosApp() {
           </section>
 
           <section className="bg-white border border-wood/10 p-4 space-y-2">
-            {cart.map((item) => (
-              <div key={item.productId} className="flex justify-between text-sm">
-                <span>{item.quantity}× {item.name}</span>
+            {cart.map((item) => {
+              const lineKey = getPosLineKey(item);
+              const label = item.variantName
+                ? `${item.name} – ${item.variantName}`
+                : item.name;
+              return (
+              <div key={lineKey} className="flex justify-between text-sm">
+                <span>{item.quantity}× {label}</span>
                 <span>{formatPrice(item.price * item.quantity)}</span>
               </div>
-            ))}
+            )})}
             <div className="border-t border-wood/10 pt-2 flex justify-between font-semibold text-lg">
               <span>Gesamt</span>
               <span className="text-forest">{formatPrice(totals.total)}</span>
@@ -666,11 +725,13 @@ export default function PosApp() {
         ) : (
         <>
         <div className="grid grid-cols-2 gap-3">
-          {filteredProducts.map((p) => (
+          {filteredProducts.map((p) => {
+            const stock = getProductListStock(p);
+            return (
             <button
               key={p.id}
               onClick={() => addToCart(p)}
-              disabled={p.stock <= 0}
+              disabled={stock <= 0}
               className="text-left bg-linen text-wood-dark overflow-hidden border border-wood/10 disabled:opacity-40 active:scale-[0.98] transition-transform"
             >
               <div className="relative aspect-square bg-wood/5">
@@ -688,12 +749,12 @@ export default function PosApp() {
                     <Package className="w-10 h-10 text-forest/20" />
                   </div>
                 )}
-                {p.stock <= 3 && p.stock > 0 && (
+                {stock <= 3 && stock > 0 && (
                   <span className="absolute top-2 left-2 text-[10px] bg-amber-500 text-white px-2 py-0.5">
-                    {p.stock} übrig
+                    {stock} übrig
                   </span>
                 )}
-                {p.stock <= 0 && (
+                {stock <= 0 && (
                   <span className="absolute inset-0 bg-wood-dark/50 flex items-center justify-center text-linen text-xs font-medium">
                     Ausverkauft
                   </span>
@@ -704,7 +765,7 @@ export default function PosApp() {
                 <p className="text-forest font-display text-lg">{formatPrice(p.price)}</p>
               </div>
             </button>
-          ))}
+          )})}
         </div>
         {filteredProducts.length === 0 && (
           <p className="text-center text-linen/50 py-12">Keine Produkte gefunden.</p>
@@ -727,22 +788,27 @@ export default function PosApp() {
               {cart.length === 0 && (
                 <p className="text-center text-stone py-8">Warenkorb ist leer.</p>
               )}
-              {cart.map((item) => (
-                <div key={item.productId} className="flex items-center gap-3">
+              {cart.map((item) => {
+                const lineKey = getPosLineKey(item);
+                const label = item.variantName
+                  ? `${item.name} – ${item.variantName}`
+                  : item.name;
+                return (
+                <div key={lineKey} className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{item.name}</p>
+                    <p className="font-medium text-sm truncate">{label}</p>
                     <p className="text-forest text-sm">{formatPrice(item.price)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => updateQty(item.productId, -1)}
+                      onClick={() => updateQty(lineKey, -1)}
                       className="p-1.5 border border-wood/20"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
                     <span className="w-6 text-center">{item.quantity}</span>
                     <button
-                      onClick={() => updateQty(item.productId, 1)}
+                      onClick={() => updateQty(lineKey, 1)}
                       className="p-1.5 border border-wood/20"
                     >
                       <Plus className="w-4 h-4" />
@@ -750,14 +816,14 @@ export default function PosApp() {
                   </div>
                   <button
                     onClick={() =>
-                      setCart((prev) => prev.filter((i) => i.productId !== item.productId))
+                      setCart((prev) => prev.filter((row) => getPosLineKey(row) !== lineKey))
                     }
                     className="p-1 text-red-600"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-              ))}
+              )})}
             </div>
             <div className="p-4 border-t border-wood/10 space-y-3">
               <div className="flex justify-between text-lg font-semibold">
@@ -889,6 +955,41 @@ export default function PosApp() {
                 </div>
               </div>
               {error && <p className="text-red-600 text-sm">{error}</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {variantPickerProduct && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-wood-dark/70"
+            onClick={() => setVariantPickerProduct(null)}
+          />
+          <div className="relative w-full max-w-md bg-linen text-wood-dark rounded-2xl p-5 space-y-4 mb-pwa-nav sm:mb-0">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-xl">Variante wählen</h2>
+              <button onClick={() => setVariantPickerProduct(null)}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-stone">{variantPickerProduct.name}</p>
+            <div className="space-y-2">
+              {getActiveVariants(variantPickerProduct).map((variant) => (
+                <button
+                  key={variant.id}
+                  type="button"
+                  disabled={variant.stock <= 0}
+                  onClick={() => addVariantToCart(variantPickerProduct, variant)}
+                  className="w-full flex items-center justify-between rounded-xl border border-wood/15 px-4 py-3 text-left hover:border-forest/40 disabled:opacity-40"
+                >
+                  <span className="font-medium">{variant.name}</span>
+                  <span className="text-forest">
+                    {formatPrice(variant.price)}
+                    {variant.stock <= 0 ? " · ausverkauft" : ` · ${variant.stock} Stk.`}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

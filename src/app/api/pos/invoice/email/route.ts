@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireModuleWrite } from "@/lib/admin-auth";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { getCompanySettingsServer } from "@/lib/company-server";
 import { invoicePdfToBuffer } from "@/lib/documents/pdf";
@@ -20,7 +20,7 @@ function formatEuro(amount: number): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin(req);
+    const auth = await requireModuleWrite(req, "pos");
     if ("error" in auth && auth.error) return auth.error;
 
     if (!isEmailConfigured()) {

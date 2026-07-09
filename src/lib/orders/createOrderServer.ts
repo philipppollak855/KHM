@@ -1,22 +1,12 @@
-import { FieldValue, type DocumentReference } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { buildOrderItemsFromCart, aggregateTaxBreakdown, roundCurrency } from "@/lib/pricing";
 import type { Address, CartItem } from "@/lib/types";
 import { createPaymentRecord, invoiceDueDate } from "@/lib/payments/payments-server";
 import { resolveCartItemsServer } from "./validateCartServer";
+import { deductStockInTransaction } from "./stock-server";
 
-export class InsufficientStockError extends Error {
-  constructor(
-    public productName: string,
-    public available: number,
-    public requested: number
-  ) {
-    super(
-      `Nicht genug Lagerbestand für „${productName}“ (verfügbar: ${available}, bestellt: ${requested}).`
-    );
-    this.name = "InsufficientStockError";
-  }
-}
+export { InsufficientStockError } from "./stock-server";
 
 function uniqueId(prefix: string) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -50,36 +40,6 @@ export async function createOrderWithStockDeduction(data: {
     const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
     const taxBreakdown = aggregateTaxBreakdown(items);
     const total = roundCurrency(subtotalGross + data.shipping);
-
-    const totalsByProduct = new Map<string, { name: string; quantity: number }>();
-    for (const item of cartItems) {
-      const existing = totalsByProduct.get(item.productId);
-      if (existing) existing.quantity += item.quantity;
-      else totalsByProduct.set(item.productId, { name: item.name, quantity: item.quantity });
-    }
-
-    const productUpdates: {
-      ref: DocumentReference;
-      name: string;
-      currentStock: number;
-      deduct: number;
-    }[] = [];
-
-    for (const [productId, { name, quantity }] of totalsByProduct) {
-      const productRef = db.collection("products").doc(productId);
-      const snap = await tx.get(productRef);
-      if (!snap.exists) throw new Error(`Produkt „${name}“ nicht gefunden.`);
-      const stock = (snap.data()?.stock as number) ?? 0;
-      if (stock < quantity) {
-        throw new InsufficientStockError(name, stock, quantity);
-      }
-      productUpdates.push({
-        ref: productRef,
-        name: (snap.data()?.name as string) || name,
-        currentStock: stock,
-        deduct: quantity,
-      });
-    }
 
     tx.set(orderRef, {
       userId: data.userId,
@@ -142,22 +102,21 @@ export async function createOrderWithStockDeduction(data: {
       notes: "Online-Bestellung – Überweisung offen",
     });
 
-    for (const update of productUpdates) {
-      const newStock = update.currentStock - update.deduct;
-      tx.update(update.ref, { stock: newStock });
-      tx.set(db.collection("stockMovements").doc(), {
-        productId: update.ref.id,
-        productName: update.name,
-        delta: -update.deduct,
-        stockAfter: newStock,
-        reason: "order",
+    await deductStockInTransaction(
+      tx,
+      db,
+      cartItems.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        name: item.name,
+        quantity: item.quantity,
+      })),
+      {
         orderId: orderRef.id,
         orderNumber,
-        note: null,
-        createdBy: data.userId,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    }
+        userId: data.userId,
+      }
+    );
 
     resultOrderId = orderRef.id;
     resultInvoiceId = invoiceRef.id;

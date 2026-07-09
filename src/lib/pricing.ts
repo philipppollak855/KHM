@@ -1,4 +1,5 @@
 import type { CartItem, OrderItem, TaxBreakdownLine } from "./types";
+import { getCartDisplayName } from "./product-variants";
 
 /** Verkaufspreis aus EK + prozentualem und/oder festem Aufschlag */
 export function calculateSellingPrice(
@@ -29,13 +30,15 @@ export function buildOrderItem(
   name: string,
   grossUnitPrice: number,
   quantity: number,
-  taxRate: number
+  taxRate: number,
+  variantId?: string
 ): OrderItem {
   const grossAmount = roundCurrency(grossUnitPrice * quantity);
   const taxAmount = taxFromGross(grossAmount, taxRate);
   const netAmount = roundCurrency(grossAmount - taxAmount);
   return {
     productId,
+    variantId,
     name,
     price: grossUnitPrice,
     quantity,
@@ -48,7 +51,14 @@ export function buildOrderItem(
 
 export function buildOrderItemsFromCart(items: CartItem[]): OrderItem[] {
   return items.map((i) =>
-    buildOrderItem(i.productId, i.name, i.price, i.quantity, i.taxRate ?? 20)
+    buildOrderItem(
+      i.productId,
+      getCartDisplayName(i),
+      i.price,
+      i.quantity,
+      i.taxRate ?? 20,
+      i.variantId
+    )
   );
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireModuleWrite } from "@/lib/admin-auth";
 import { createPosOrder } from "@/lib/orders/createPosOrderServer";
 import { InsufficientStockError } from "@/lib/orders/createOrderServer";
 import { handleRouteError, parseJsonBody } from "@/lib/api-route";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin(req);
+    const auth = await requireModuleWrite(req, "pos");
     if ("error" in auth && auth.error) return auth.error;
 
     const body = await parseJsonBody(req);

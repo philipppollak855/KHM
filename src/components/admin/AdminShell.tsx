@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import {
   adminNavHubs,
+  filterAdminNavEntries,
   getCurrentNavPage,
   getCurrentNavHubLabel,
   isNavGroupActive,
@@ -23,6 +24,7 @@ import {
   type AdminNavGroup,
   type AdminNavHubId,
 } from "@/lib/admin-nav";
+import { useAuth } from "@/context/AuthContext";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import { usePwaBottomNavInset } from "@/hooks/usePwaBottomNavInset";
 import { usePwaHubMenu } from "@/hooks/usePwaHubMenu";
@@ -195,15 +197,21 @@ function NavMenu({
   collapsed?: boolean;
   onNavigate?: () => void;
 }) {
+  const { canRead } = useAuth();
+  const navEntries = useMemo(
+    () => filterAdminNavEntries(adminNavHubs, canRead),
+    [canRead]
+  );
+
   const defaultOpenGroups = useMemo(() => {
     const open = new Set<string>();
-    for (const entry of adminNavHubs) {
+    for (const entry of navEntries) {
       if (entry.type === "group" && isNavGroupActive(pathname, entry)) {
         open.add(entry.id);
       }
     }
     return open;
-  }, [pathname]);
+  }, [pathname, navEntries]);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(defaultOpenGroups);
 
@@ -226,7 +234,7 @@ function NavMenu({
 
   return (
     <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-      {adminNavHubs.map((entry) => {
+      {navEntries.map((entry) => {
         if (entry.type === "link") {
           return (
             <NavLinkItem

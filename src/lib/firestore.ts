@@ -10,6 +10,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
@@ -34,11 +35,40 @@ import { DEFAULT_SHIPPING_ZONES } from "./shipping";
 import { validateCartStock, restockOrder } from "./inventory";
 import { auth } from "./firebase";
 import type { CartItem } from "./types";
+import { parseVariantsFromFirestore } from "./product-variants";
 
 function toDate(value: unknown): Date {
   if (value instanceof Timestamp) return value.toDate();
   if (value instanceof Date) return value;
   return new Date();
+}
+
+function parseProduct(id: string, data: Record<string, unknown>): Product {
+  return {
+    id,
+    name: String(data.name || ""),
+    slug: String(data.slug || ""),
+    description: String(data.description || ""),
+    price: Number(data.price) || 0,
+    costPrice: data.costPrice !== undefined ? Number(data.costPrice) : undefined,
+    markupPercent:
+      data.markupPercent !== undefined ? Number(data.markupPercent) : undefined,
+    markupFixed:
+      data.markupFixed !== undefined ? Number(data.markupFixed) : undefined,
+    priceMode: data.priceMode as Product["priceMode"],
+    taxRate: (data.taxRate as number) ?? 20,
+    categoryId: String(data.categoryId || ""),
+    imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
+    galleryImages: Array.isArray(data.galleryImages)
+      ? data.galleryImages.map(String)
+      : undefined,
+    hasVariants: Boolean(data.hasVariants),
+    variants: parseVariantsFromFirestore(data.variants),
+    stock: Number(data.stock) || 0,
+    active: data.active !== false,
+    featured: Boolean(data.featured),
+    createdAt: toDate(data.createdAt),
+  };
 }
 
 // ─── Categories ───────────────────────────────────────────────
@@ -70,12 +100,7 @@ export async function deleteCategory(id: string) {
 
 export async function getProducts(): Promise<Product[]> {
   const snap = await getDocs(collection(db, "products"));
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-    taxRate: d.data().taxRate ?? 20,
-    createdAt: toDate(d.data().createdAt),
-  })) as Product[];
+  return snap.docs.map((d) => parseProduct(d.id, d.data() as Record<string, unknown>));
 }
 
 export async function getActiveProducts(): Promise<Product[]> {
@@ -90,23 +115,21 @@ export async function getProductsByCategory(categoryId: string): Promise<Product
     where("active", "==", true)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-    taxRate: d.data().taxRate ?? 20,
-    createdAt: toDate(d.data().createdAt),
-  })) as Product[];
+  return snap.docs.map((d) => parseProduct(d.id, d.data() as Record<string, unknown>));
+}
+
+export async function getProductBySlug(slug: string): Promise<Product | null> {
+  const q = query(collection(db, "products"), where("slug", "==", slug), limit(1));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const docSnap = snap.docs[0];
+  return parseProduct(docSnap.id, docSnap.data() as Record<string, unknown>);
 }
 
 export async function getProduct(id: string): Promise<Product | null> {
   const snap = await getDoc(doc(db, "products", id));
   if (!snap.exists()) return null;
-  return {
-    id: snap.id,
-    ...snap.data(),
-    taxRate: snap.data().taxRate ?? 20,
-    createdAt: toDate(snap.data().createdAt),
-  } as Product;
+  return parseProduct(snap.id, snap.data() as Record<string, unknown>);
 }
 
 export async function createProduct(data: Omit<Product, "id" | "createdAt">) {
@@ -222,7 +245,8 @@ export async function createOrder(data: {
   const stockCheck = await validateCartStock(
     data.cartItems.map((i) => ({
       productId: i.productId,
-      name: i.name,
+      variantId: i.variantId,
+      name: i.variantName ? `${i.name} – ${i.variantName}` : i.name,
       quantity: i.quantity,
     }))
   );

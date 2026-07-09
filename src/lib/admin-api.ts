@@ -1,9 +1,74 @@
 import { auth } from "./firebase";
+import type { PermissionModule, TeamPermissions } from "./types";
 
 async function authHeaders() {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error("Nicht angemeldet.");
   return { Authorization: `Bearer ${token}` };
+}
+
+export interface TeamMemberPayload {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  permissions?: TeamPermissions;
+  active: boolean;
+  createdAt?: string | null;
+}
+
+export async function fetchTeamMembers(): Promise<TeamMemberPayload[]> {
+  const headers = await authHeaders();
+  const res = await fetch("/api/admin/team", { headers });
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.error || "Team konnte nicht geladen werden.");
+  return payload.members as TeamMemberPayload[];
+}
+
+export async function createTeamMember(data: {
+  email: string;
+  displayName: string;
+  password: string;
+  permissions: TeamPermissions;
+}) {
+  const headers = await authHeaders();
+  const res = await fetch("/api/admin/team", {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.error || "Team-Zugang konnte nicht erstellt werden.");
+  return payload.member as TeamMemberPayload;
+}
+
+export async function updateTeamMember(data: {
+  userId: string;
+  displayName?: string;
+  password?: string;
+  permissions?: TeamPermissions;
+  active?: boolean;
+}) {
+  const headers = await authHeaders();
+  const res = await fetch("/api/admin/team", {
+    method: "PATCH",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.error || "Team-Zugang konnte nicht aktualisiert werden.");
+  return payload.member as TeamMemberPayload;
+}
+
+export async function deleteTeamMember(userId: string) {
+  const headers = await authHeaders();
+  const res = await fetch("/api/admin/team", {
+    method: "DELETE",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  });
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.error || "Team-Zugang konnte nicht gelöscht werden.");
 }
 
 export async function confirmInvoicePayment(data: {

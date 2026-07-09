@@ -6,6 +6,7 @@ import { ShoppingCart, Menu, X, User, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 
 const navLinks = [
@@ -18,8 +19,9 @@ const navLinks = [
 export default function Header() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const { user, isAdmin, logout } = useAuth();
+  const { user, canAccessAdmin, logout } = useAuth();
   const { totalItems } = useCart();
+  const isPwa = useIsStandalonePwa();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -33,10 +35,15 @@ export default function Header() {
   if (pathname.startsWith("/admin")) return null;
 
   const transparent = isHome && !scrolled && !mobileOpen;
+  const accountHref = canAccessAdmin ? "/admin/start" : "/konto";
+  const accountLabel = canAccessAdmin ? "Admin-Bereich" : "Mein Konto";
+  const iconBtnClass = transparent
+    ? "text-linen/80 hover:text-linen"
+    : "text-wood-dark hover:text-forest";
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 pt-[env(safe-area-inset-top,0px)] ${
         transparent
           ? "bg-transparent border-b border-linen/10"
           : "bg-linen/95 backdrop-blur-md border-b border-wood/8 shadow-sm"
@@ -71,9 +78,8 @@ export default function Header() {
           <div className="flex items-center gap-2">
             <Link
               href="/warenkorb"
-              className={`relative p-2.5 transition-colors ${
-                transparent ? "text-linen/80 hover:text-linen" : "text-wood-dark hover:text-forest"
-              }`}
+              className={`relative p-2.5 transition-colors ${iconBtnClass}`}
+              aria-label="Warenkorb"
             >
               <ShoppingCart className="w-4 h-4" strokeWidth={1.5} />
               {totalItems > 0 && (
@@ -83,36 +89,28 @@ export default function Header() {
               )}
             </Link>
 
+            {user && (
+              <Link
+                href={accountHref}
+                className={`p-2.5 transition-colors ${iconBtnClass}`}
+                aria-label={accountLabel}
+                title={accountLabel}
+              >
+                <User className="w-4 h-4" strokeWidth={1.5} />
+              </Link>
+            )}
+
             {user ? (
-              <div className="hidden sm:flex items-center gap-1">
-                {isAdmin && (
-                  <Link
-                    href="/admin/start"
-                    className={`text-xs tracking-wider uppercase px-3 py-2 transition-colors ${
-                      transparent ? "text-linen/70 hover:text-linen" : "text-forest hover:text-forest-light"
-                    }`}
-                  >
-                    Admin
-                  </Link>
-                )}
-                <Link
-                  href="/konto"
-                  className={`p-2.5 transition-colors ${
-                    transparent ? "text-linen/80 hover:text-linen" : "text-wood-dark hover:text-forest"
-                  }`}
-                >
-                  <User className="w-4 h-4" strokeWidth={1.5} />
-                </Link>
-                <button
-                  onClick={() => logout()}
-                  className={`p-2.5 transition-colors ${
-                    transparent ? "text-linen/80 hover:text-linen" : "text-wood-dark hover:text-forest"
-                  }`}
-                  title="Abmelden"
-                >
-                  <LogOut className="w-4 h-4" strokeWidth={1.5} />
-                </button>
-              </div>
+              <button
+                onClick={() => logout()}
+                className={`p-2.5 transition-colors ${iconBtnClass} ${
+                  isPwa ? "inline-flex" : "hidden sm:inline-flex"
+                }`}
+                title="Abmelden"
+                aria-label="Abmelden"
+              >
+                <LogOut className="w-4 h-4" strokeWidth={1.5} />
+              </button>
             ) : (
               <Link
                 href="/login"
@@ -156,21 +154,22 @@ export default function Header() {
             {user ? (
               <>
                 <Link
-                  href="/konto"
+                  href={accountHref}
                   onClick={() => setMobileOpen(false)}
                   className="block px-4 py-3 text-sm tracking-wider uppercase text-wood-dark"
                 >
-                  Mein Konto
+                  {accountLabel}
                 </Link>
-                {isAdmin && (
-                  <Link
-                    href="/admin/start"
-                    onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 text-sm tracking-wider uppercase text-forest"
-                  >
-                    Admin
-                  </Link>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    void logout();
+                  }}
+                  className="block w-full text-left px-4 py-3 text-sm tracking-wider uppercase text-wood-dark"
+                >
+                  Abmelden
+                </button>
               </>
             ) : (
               <Link

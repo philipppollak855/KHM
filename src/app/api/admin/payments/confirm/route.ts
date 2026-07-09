@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireModuleWrite } from "@/lib/admin-auth";
 import { confirmPaymentServer } from "@/lib/payments/payments-server";
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
+  const auth = await requireModuleWrite(req, "invoices");
   if ("error" in auth && auth.error) return auth.error;
 
   const body = await req.json();

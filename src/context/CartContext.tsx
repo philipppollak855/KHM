@@ -8,12 +8,13 @@ import {
   type ReactNode,
 } from "react";
 import type { CartItem } from "@/lib/types";
+import { getCartItemLineKey } from "@/lib/product-variants";
 
 interface CartContextType {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (lineKey: string) => void;
+  updateQuantity: (lineKey: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -49,16 +50,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hydrated]);
 
   const addItem = (item: Omit<CartItem, "quantity">, quantity = 1) => {
+    const lineKey = getCartItemLineKey(item);
     setItems((prev) => {
       const maxStock = item.maxStock;
-      const existing = prev.find((i) => i.productId === item.productId);
+      const existing = prev.find((i) => getCartItemLineKey(i) === lineKey);
       if (existing) {
         const nextQty = existing.quantity + quantity;
         const capped =
           maxStock !== undefined ? Math.min(nextQty, maxStock) : nextQty;
         if (capped <= 0) return prev;
         return prev.map((i) =>
-          i.productId === item.productId
+          getCartItemLineKey(i) === lineKey
             ? { ...i, quantity: capped, maxStock: maxStock ?? i.maxStock }
             : i
         );
@@ -70,18 +72,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const removeItem = (productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId));
+  const removeItem = (lineKey: string) => {
+    setItems((prev) => prev.filter((i) => getCartItemLineKey(i) !== lineKey));
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (lineKey: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(lineKey);
       return;
     }
     setItems((prev) =>
       prev.map((i) => {
-        if (i.productId !== productId) return i;
+        if (getCartItemLineKey(i) !== lineKey) return i;
         const capped =
           i.maxStock !== undefined ? Math.min(quantity, i.maxStock) : quantity;
         return { ...i, quantity: capped };
@@ -116,3 +118,5 @@ export function useCart() {
   if (!context) throw new Error("useCart must be used within CartProvider");
   return context;
 }
+
+export { getCartItemLineKey };

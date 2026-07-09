@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   type ReactNode,
 } from "react";
 import {
@@ -17,7 +18,14 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import type { User } from "@/lib/types";
+import {
+  canAccessAdminArea,
+  canReadModule,
+  canWriteModule,
+  isOwnerUser,
+  parsePermissionsFromFirestore,
+} from "@/lib/permissions";
+import type { PermissionModule, TeamPermissions, User } from "@/lib/types";
 
 interface AuthContextType {
   user: User | null;
@@ -31,9 +39,28 @@ interface AuthContextType {
   ) => Promise<void>;
   logout: () => Promise<void>;
   isAdmin: boolean;
+  isOwner: boolean;
+  canAccessAdmin: boolean;
+  canRead: (module: PermissionModule) => boolean;
+  canWrite: (module: PermissionModule) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function mapUserDoc(id: string, email: string, data: Record<string, unknown>): User {
+  return {
+    id,
+    email,
+    displayName: (data.displayName as string) || "",
+    role: (data.role as User["role"]) || "customer",
+    phone: data.phone as string | undefined,
+    address: data.address as User["address"],
+    permissions: parsePermissionsFromFirestore(data.permissions),
+    active: data.active !== false,
+    createdAt:
+      (data.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -46,16 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (fbUser) {
         const userDoc = await getDoc(doc(db, "users", fbUser.uid));
         if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUser({
-            id: fbUser.uid,
-            email: fbUser.email || "",
-            displayName: data.displayName || fbUser.displayName || "",
-            role: data.role || "customer",
-            phone: data.phone,
-            address: data.address,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-          });
+          setUser(mapUserDoc(fbUser.uid, fbUser.email || "", userDoc.data()));
         } else {
           setUser(null);
         }
@@ -72,16 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userDoc = await getDoc(doc(db, "users", cred.user.uid));
     if (!userDoc.exists()) return null;
 
-    const data = userDoc.data();
-    const loggedInUser: User = {
-      id: cred.user.uid,
-      email: cred.user.email || "",
-      displayName: data.displayName || cred.user.displayName || "",
-      role: data.role || "customer",
-      phone: data.phone,
-      address: data.address,
-      createdAt: data.createdAt?.toDate?.() || new Date(),
-    };
+    const loggedInUser = mapUserDoc(
+      cred.user.uid,
+      cred.user.email || "",
+      userDoc.data()
+    );
     setUser(loggedInUser);
     return loggedInUser;
   };
@@ -101,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       displayName,
       role,
+      active: true,
       createdAt: serverTimestamp(),
     });
   };
@@ -108,6 +122,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await signOut(auth);
   };
+
+  const canRead = useCallback(
+    (module: PermissionModule) => canReadModule(user, module),
+    [user]
+  );
+
+  const canWrite = useCallback(
+    (module: PermissionModule) => canWriteModule(user, module),
+    [user]
+  );
 
   return (
     <AuthContext.Provider
@@ -118,7 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         logout,
-        isAdmin: user?.role === "admin",
+        isAdmin: canAccessAdminArea(user),
+        isOwner: isOwnerUser(user),
+        canAccessAdmin: canAccessAdminArea(user),
+        canRead,
+        canWrite,
       }}
     >
       {children}

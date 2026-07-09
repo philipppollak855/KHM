@@ -1,4 +1,4 @@
-import { FieldValue, Timestamp, type DocumentReference } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import {
   buildOrderItemsFromCart,
@@ -6,8 +6,8 @@ import {
   roundCurrency,
 } from "@/lib/pricing";
 import type { Address, CartItem, PaymentMethod } from "@/lib/types";
-import { InsufficientStockError } from "./createOrderServer";
 import { resolveCartItemsServer } from "./validateCartServer";
+import { deductStockInTransaction } from "./stock-server";
 import { normalizePosCustomerName } from "@/lib/customer-display";
 import {
   createPaymentRecord,
@@ -64,8 +64,6 @@ export async function createPosOrder(data: {
     country: data.address?.country || DEFAULT_POS_ADDRESS.country,
   };
 
-  const totalsByProduct = new Map<string, { name: string; quantity: number }>();
-
   const orderRef = db.collection("orders").doc();
   const invoiceRef = db.collection("invoices").doc();
   const paymentRef = db.collection("payments").doc();
@@ -83,35 +81,6 @@ export async function createPosOrder(data: {
     const shipping = 0;
     const total = roundCurrency(subtotalGross + shipping);
     saleTotal = total;
-
-    for (const item of cartItems) {
-      const existing = totalsByProduct.get(item.productId);
-      if (existing) existing.quantity += item.quantity;
-      else totalsByProduct.set(item.productId, { name: item.name, quantity: item.quantity });
-    }
-
-    const productUpdates: {
-      ref: DocumentReference;
-      name: string;
-      currentStock: number;
-      deduct: number;
-    }[] = [];
-
-    for (const [productId, { name, quantity }] of totalsByProduct) {
-      const productRef = db.collection("products").doc(productId);
-      const snap = await tx.get(productRef);
-      if (!snap.exists) throw new Error(`Produkt „${name}“ nicht gefunden.`);
-      const stock = (snap.data()?.stock as number) ?? 0;
-      if (stock < quantity) {
-        throw new InsufficientStockError(name, stock, quantity);
-      }
-      productUpdates.push({
-        ref: productRef,
-        name: (snap.data()?.name as string) || name,
-        currentStock: stock,
-        deduct: quantity,
-      });
-    }
 
     tx.set(orderRef, {
       userId,
@@ -182,22 +151,22 @@ export async function createPosOrder(data: {
       confirmedBy: paidNow ? data.adminUserId : undefined,
     });
 
-    for (const update of productUpdates) {
-      const newStock = update.currentStock - update.deduct;
-      tx.update(update.ref, { stock: newStock });
-      tx.set(db.collection("stockMovements").doc(), {
-        productId: update.ref.id,
-        productName: update.name,
-        delta: -update.deduct,
-        stockAfter: newStock,
-        reason: "order",
+    await deductStockInTransaction(
+      tx,
+      db,
+      cartItems.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        name: item.name,
+        quantity: item.quantity,
+      })),
+      {
         orderId: orderRef.id,
         orderNumber,
-        note: "POS-Verkauf",
-        createdBy: data.adminUserId,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    }
+        userId: data.adminUserId,
+        reason: "order",
+      }
+    );
   });
 
   return {

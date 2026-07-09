@@ -11,11 +11,11 @@ import { usePwaBottomNavInset } from "@/hooks/usePwaBottomNavInset";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isAdmin } = useAuth();
+  const { isAdmin, canAccessAdmin } = useAuth();
   const isPwa = useIsStandalonePwa();
   const isStandaloneApp =
     pathname?.startsWith("/pos") || pathname?.startsWith("/admin");
-  const showPwaAdminNav = isPwa && isAdmin && !isStandaloneApp;
+  const showPwaAdminNav = isPwa && canAccessAdmin && !isStandaloneApp;
 
   usePwaBottomNavInset(showPwaAdminNav);
 
@@ -28,7 +28,11 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       <PwaRootGuard />
       <Header />
       <div className="flex flex-col flex-1">
-        <main className={`flex-1 pt-20 ${showPwaAdminNav ? "pb-pwa-nav" : ""}`}>
+        <main
+          className={`flex-1 pt-[calc(5rem+env(safe-area-inset-top,0px))] ${
+            showPwaAdminNav ? "pb-pwa-nav" : isPwa ? "pb-[env(safe-area-inset-bottom,0px)]" : ""
+          }`}
+        >
           {children}
         </main>
         <Footer className={showPwaAdminNav ? "pb-pwa-nav" : undefined} />

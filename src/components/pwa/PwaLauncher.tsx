@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Home, LogOut, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSwipePages } from "@/hooks/useSwipePages";
 import PwaBottomNav from "@/components/pwa/PwaBottomNav";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
+import { filterPwaLauncherPages } from "@/lib/permissions";
 import {
   getPwaGreeting,
   pwaLauncherPages,
@@ -54,12 +55,16 @@ function formatDate(date: Date) {
 }
 
 export default function PwaLauncher() {
-  const { logout } = useAuth();
+  const { logout, canRead } = useAuth();
   const { company } = useCompanyBranding();
   usePwaBottomNavInset(true);
   const [now, setNow] = useState(() => new Date());
+  const launcherPages = useMemo(
+    () => filterPwaLauncherPages(pwaLauncherPages, canRead),
+    [canRead]
+  );
   const { scrollerRef, activePage, scrollToPage } = useSwipePages(
-    pwaLauncherPages.length
+    launcherPages.length
   );
 
   useEffect(() => {
@@ -123,7 +128,7 @@ export default function PwaLauncher() {
           className="flex-1 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory scrollbar-none"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {pwaLauncherPages.map((page) => (
+          {launcherPages.map((page) => (
             <section
               key={page.id}
               className="w-full shrink-0 snap-center snap-always px-4 flex flex-col"
@@ -151,7 +156,7 @@ export default function PwaLauncher() {
 
         <div className="relative z-10 flex flex-col items-center gap-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
-            {pwaLauncherPages.map((page, index) => (
+            {launcherPages.map((page, index) => (
               <button
                 key={page.id}
                 type="button"

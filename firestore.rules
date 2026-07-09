@@ -6,73 +6,109 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isOwner(userId) {
+    function isOwner() {
+      return isAuthenticated() &&
+        userData().role == 'admin' &&
+        userData().get('active', true) == true;
+    }
+
+    function isTeam() {
+      return isAuthenticated() &&
+        userData().role == 'team' &&
+        userData().get('active', true) == true;
+    }
+
+    function isStaff() {
+      return isOwner() || isTeam();
+    }
+
+    function modulePerm(module, field) {
+      return userData().get('permissions', {}).get(module, {}).get(field, false) == true;
+    }
+
+    function canRead(module) {
+      return isOwner() || (isTeam() && modulePerm(module, 'read'));
+    }
+
+    function canWrite(module) {
+      return isOwner() || (isTeam() && modulePerm(module, 'write'));
+    }
+
+    function canReadDashboard() {
+      return canRead('dashboard') || canRead('orders') || canRead('invoices');
+    }
+
+    function isOwnerUser(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isOwnerUser(userId) || isOwner() || (isTeam() && canRead('customers'));
+      allow create: if isOwnerUser(userId) &&
+        request.resource.data.role == 'customer' &&
+        !request.resource.data.keys().hasAny(['permissions']);
+      allow update: if isOwner() || (
+        isOwnerUser(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'active'])
+      );
+      allow delete: if isOwner();
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canWrite('categories');
     }
 
     match /products/{productId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canWrite('products') || canWrite('inventory');
     }
 
     match /settings/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canWrite('settings');
     }
 
     match /shippingZones/{zoneId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if canWrite('shipping');
     }
 
     match /orders/{orderId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow read: if canRead('orders') || canReadDashboard() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update: if canWrite('orders') || canWrite('pos');
+      allow delete: if canWrite('orders');
     }
 
     match /invoices/{invoiceId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow read: if canRead('invoices') || canRead('dunning') || canReadDashboard() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update: if canWrite('invoices') || canWrite('dunning') || canWrite('pos');
+      allow delete: if canWrite('invoices');
     }
 
     match /payments/{paymentId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isAdmin();
-      allow update: if isAdmin();
+      allow read: if canRead('invoices') || canRead('pos') || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if canWrite('pos') || canWrite('invoices');
+      allow update: if canWrite('invoices') || canWrite('pos');
       allow delete: if false;
     }
 
     match /deliveryNotes/{noteId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if canRead('orders') || canRead('pos') || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if canWrite('orders') || canWrite('pos');
+      allow update: if canWrite('orders') || canWrite('pos');
+      allow delete: if canWrite('orders');
     }
 
     match /stockMovements/{movementId} {
-      allow read: if isAdmin();
-      allow create: if isAdmin();
+      allow read: if canRead('inventory');
+      allow create: if canWrite('inventory');
       allow update, delete: if false;
     }
 
@@ -90,8 +126,8 @@ service cloud.firestore {
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0
         && request.resource.data.message.size() <= 5000;
-      allow read, update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if canRead('contactInquiries');
+      allow update, delete: if canWrite('contactInquiries');
     }
   }
 }

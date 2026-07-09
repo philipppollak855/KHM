@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Minus, Plus, Trash2, ArrowRight } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { Minus, Plus, Trash2, ArrowRight, Leaf } from "lucide-react";
+import Image from "next/image";
+import { useCart, getCartItemLineKey } from "@/context/CartContext";
 import { useOrderCalculation } from "@/hooks/useOrderCalculation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -35,39 +36,55 @@ export default function CartPage() {
       <PageHeader label="Shop" title="Warenkorb" />
 
       <div className="space-y-4 mb-10">
-        {items.map((item) => (
+        {items.map((item) => {
+          const lineKey = getCartItemLineKey(item);
+          const displayName = item.variantName
+            ? `${item.name} – ${item.variantName}`
+            : item.name;
+
+          return (
           <div
-            key={item.productId}
+            key={lineKey}
             className="flex items-center gap-4 p-5 bg-linen border border-wood/10"
           >
-            <div className="w-16 h-16 bg-linen-dark flex items-center justify-center text-2xl shrink-0">
-              🌿
+            <div className="relative w-16 h-16 bg-linen-dark flex items-center justify-center shrink-0 overflow-hidden">
+              {item.imageUrl ? (
+                <Image
+                  src={item.imageUrl}
+                  alt={displayName}
+                  fill
+                  className="object-cover"
+                  unoptimized={item.imageUrl.includes("firebasestorage")}
+                />
+              ) : (
+                <Leaf className="w-6 h-6 text-forest/40" />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-display text-lg font-light text-wood-dark truncate">
-                {item.name}
+                {displayName}
               </h3>
               <p className="text-sm text-stone">
                 {formatPrice(item.price)} · inkl. {item.taxRate ?? 20} % USt.
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} className="p-1 hover:bg-wood/10">
+              <button onClick={() => updateQuantity(lineKey, item.quantity - 1)} className="p-1 hover:bg-wood/10">
                 <Minus className="w-4 h-4" />
               </button>
               <span className="w-8 text-center">{item.quantity}</span>
-              <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} className="p-1 hover:bg-wood/10">
+              <button onClick={() => updateQuantity(lineKey, item.quantity + 1)} className="p-1 hover:bg-wood/10">
                 <Plus className="w-4 h-4" />
               </button>
             </div>
             <p className="font-medium text-wood-dark w-20 text-right">
               {formatPrice(item.price * item.quantity)}
             </p>
-            <button onClick={() => removeItem(item.productId)} className="p-2 text-red-600 hover:bg-red-50">
+            <button onClick={() => removeItem(lineKey)} className="p-2 text-red-600 hover:bg-red-50">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
-        ))}
+        )})}
       </div>
 
       <div className="bg-linen-dark/40 border border-wood/10 p-6">

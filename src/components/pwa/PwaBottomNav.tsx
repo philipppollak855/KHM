@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -17,6 +17,8 @@ import {
 } from "@/lib/admin-nav";
 import { PWA_MOBILE_NAV_MQ } from "@/lib/pwa-layout";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import { getModuleForPath } from "@/lib/permissions";
+import { useAuth } from "@/context/AuthContext";
 
 type Tab = {
   id: string;
@@ -26,14 +28,7 @@ type Tab = {
   isActive: (pathname: string) => boolean;
 };
 
-const tabs: Tab[] = [
-  {
-    id: "start",
-    label: "Start",
-    icon: LayoutGrid,
-    href: "/admin/start",
-    isActive: (pathname) => pathname === "/admin/start",
-  },
+const sideTabs: Tab[] = [
   {
     id: "sales",
     label: "Verkauf",
@@ -69,10 +64,91 @@ const tabs: Tab[] = [
   },
 ];
 
+const startTab: Tab = {
+  id: "start",
+  label: "Start",
+  icon: LayoutGrid,
+  href: "/admin/start",
+  isActive: (pathname) => pathname === "/admin/start",
+};
+
+function SideTabLink({ tab, pathname }: { tab: Tab; pathname: string }) {
+  const Icon = tab.icon;
+  const active = tab.isActive(pathname);
+
+  return (
+    <Link
+      href={tab.href}
+      className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2 min-h-[3.25rem] touch-manipulation transition-colors ${
+        active
+          ? "bg-forest text-cream"
+          : "text-cream/55 hover:text-cream hover:bg-cream/5"
+      }`}
+      aria-current={active ? "page" : undefined}
+    >
+      <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
+      <span className="text-[10px] font-medium leading-none">{tab.label}</span>
+    </Link>
+  );
+}
+
+function StartTabButton({ tab, pathname }: { tab: Tab; pathname: string }) {
+  const Icon = tab.icon;
+  const active = tab.isActive(pathname);
+
+  return (
+    <Link
+      href={tab.href}
+      className="group absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[38%] touch-manipulation"
+      aria-current={active ? "page" : undefined}
+      aria-label="Startbildschirm"
+    >
+      <span
+        className={`relative flex h-[3.65rem] w-[3.65rem] flex-col items-center justify-center gap-0.5 rounded-2xl border-2 shadow-[0_10px_28px_rgba(0,0,0,0.38)] transition-all duration-200 ${
+          active
+            ? "border-wheat bg-forest text-cream scale-105 shadow-[0_12px_32px_rgba(61,79,50,0.55)]"
+            : "border-wheat/85 bg-linen text-forest group-hover:scale-[1.03] group-active:scale-95"
+        }`}
+      >
+        <span
+          className={`pointer-events-none absolute inset-0 rounded-2xl ${
+            active
+              ? "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.35),transparent_55%)]"
+              : "bg-[radial-gradient(circle_at_30%_20%,rgba(184,149,108,0.22),transparent_60%)]"
+          }`}
+          aria-hidden
+        />
+        <Icon className="relative w-6 h-6" strokeWidth={active ? 2.25 : 2} />
+        <span className="relative text-[10px] font-semibold tracking-wide leading-none">
+          {tab.label}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
 export default function PwaBottomNav() {
   const pathname = usePathname() || "/";
   const isPwa = useIsStandalonePwa();
+  const { canRead } = useAuth();
   const navRef = useRef<HTMLElement>(null);
+
+  const canShowTab = (tab: Tab) => {
+    const module = getModuleForPath(tab.href);
+    return !module || canRead(module);
+  };
+
+  const { leftTabs, rightTabs, showStart } = useMemo(() => {
+    const visibleSide = sideTabs.filter(canShowTab);
+    const mid = Math.ceil(visibleSide.length / 2);
+    const startVisible = canShowTab(startTab);
+
+    return {
+      leftTabs: visibleSide.slice(0, mid),
+      rightTabs: visibleSide.slice(mid),
+      showStart: startVisible,
+    };
+  }, [canRead]);
 
   useLayoutEffect(() => {
     if (typeof document === "undefined") return;
@@ -106,9 +182,10 @@ export default function PwaBottomNav() {
       mq.removeEventListener("change", syncHeight);
       root.style.setProperty("--pwa-bottom-nav", "0px");
     };
-  }, [isPwa]);
+  }, [isPwa, showStart, leftTabs.length, rightTabs.length]);
 
-  if (!isPwa) return null;
+  const hasSideTabs = leftTabs.length > 0 || rightTabs.length > 0;
+  if (!isPwa || (!showStart && !hasSideTabs)) return null;
 
   return (
     <nav
@@ -116,29 +193,29 @@ export default function PwaBottomNav() {
       className="pwa-bottom-nav fixed inset-x-0 bottom-0 z-40 lg:hidden"
       aria-label="Hauptnavigation"
     >
-      <div className="mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="grid grid-cols-5 gap-1 rounded-2xl border border-white/10 bg-wood-dark/92 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)] p-1.5">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = tab.isActive(pathname);
-            const baseClass = `flex flex-col items-center justify-center gap-1 rounded-xl py-2 min-h-[3.25rem] touch-manipulation transition-colors ${
-              active
-                ? "bg-forest text-cream"
-                : "text-cream/55 hover:text-cream hover:bg-cream/5"
-            }`;
+      <div
+        className={`mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] ${
+          showStart ? "pt-7" : "pt-2"
+        }`}
+      >
+        <div className="relative rounded-2xl border border-white/10 bg-wood-dark/92 backdrop-blur-xl shadow-[0_-8px_32px_rgba(0,0,0,0.35)] p-1.5">
+          {showStart && <StartTabButton tab={startTab} pathname={pathname} />}
 
-            return (
-              <Link
-                key={tab.id}
-                href={tab.href!}
-                className={baseClass}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon className="w-5 h-5" strokeWidth={active ? 2 : 1.75} />
-                <span className="text-[10px] font-medium leading-none">{tab.label}</span>
-              </Link>
-            );
-          })}
+          <div className="flex items-stretch gap-1">
+            <div className="flex flex-1 gap-1 min-w-0">
+              {leftTabs.map((tab) => (
+                <SideTabLink key={tab.id} tab={tab} pathname={pathname} />
+              ))}
+            </div>
+
+            {showStart && <div className="w-[4.25rem] shrink-0" aria-hidden />}
+
+            <div className="flex flex-1 gap-1 min-w-0">
+              {rightTabs.map((tab) => (
+                <SideTabLink key={tab.id} tab={tab} pathname={pathname} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </nav>

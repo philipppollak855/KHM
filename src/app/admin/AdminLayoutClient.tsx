@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import AdminShell from "@/components/admin/AdminShell";
 import PwaRootGuard from "@/components/pwa/PwaRootGuard";
 import PwaLauncherGate from "@/components/pwa/PwaLauncherGate";
+import { getModuleForPath } from "@/lib/permissions";
 
 export default function AdminLayoutClient({
   children,
@@ -14,19 +15,34 @@ export default function AdminLayoutClient({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAdmin, loading, logout } = useAuth();
+  const { user, canAccessAdmin, canRead, loading, logout } = useAuth();
   const isLauncher = pathname === "/admin/start";
+  const requiredModule = getModuleForPath(pathname || "");
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!loading && (!user || !canAccessAdmin)) {
       router.push("/login");
     }
-  }, [user, isAdmin, loading, router]);
+  }, [user, canAccessAdmin, loading, router]);
 
-  if (loading || !user || !isAdmin) {
+  useEffect(() => {
+    if (!loading && canAccessAdmin && requiredModule && !canRead(requiredModule)) {
+      router.replace("/admin/start");
+    }
+  }, [loading, canAccessAdmin, requiredModule, canRead, router]);
+
+  if (loading || !user || !canAccessAdmin) {
     return (
       <div className="min-h-dvh flex items-center justify-center bg-wood-dark">
         <p className="text-cream/60">Laden...</p>
+      </div>
+    );
+  }
+
+  if (requiredModule && !canRead(requiredModule)) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-wood-dark">
+        <p className="text-cream/60">Keine Berechtigung für dieses Modul.</p>
       </div>
     );
   }

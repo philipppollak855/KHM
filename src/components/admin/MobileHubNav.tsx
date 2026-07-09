@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import {
   adminNavHubs,
+  filterAdminNavEntries,
   isNavGroupActive,
   isNavLinkActive,
   type AdminNavGroup,
   type AdminNavHubId,
 } from "@/lib/admin-nav";
+import { useAuth } from "@/context/AuthContext";
 
 function HubSubLink({
   href,
@@ -151,6 +153,11 @@ export default function MobileHubNav({
   focusHub?: AdminNavHubId | null;
 }) {
   const pathname = usePathname() || "/";
+  const { canRead } = useAuth();
+  const navEntries = useMemo(
+    () => filterAdminNavEntries(adminNavHubs, canRead),
+    [canRead]
+  );
   const [expandedHub, setExpandedHub] = useState<AdminNavHubId | null>(null);
 
   useEffect(() => {
@@ -158,14 +165,14 @@ export default function MobileHubNav({
       setExpandedHub(focusHub);
       return;
     }
-    for (const entry of adminNavHubs) {
+    for (const entry of navEntries) {
       if (entry.type === "group" && isNavGroupActive(pathname, entry)) {
         setExpandedHub(entry.id);
         return;
       }
     }
     setExpandedHub(null);
-  }, [focusHub, pathname]);
+  }, [focusHub, pathname, navEntries]);
 
   const toggleHub = (id: AdminNavHubId) => {
     setExpandedHub((prev) => (prev === id ? null : id));
@@ -176,7 +183,7 @@ export default function MobileHubNav({
       <p className="px-1 pb-1 text-[10px] uppercase tracking-[0.28em] text-cream/40">
         Hauptmenü
       </p>
-      {adminNavHubs.map((entry) => {
+      {navEntries.map((entry) => {
         if (entry.type === "link") {
           return (
             <HubDirectLink

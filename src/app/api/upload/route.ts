@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStorage } from "firebase-admin/storage";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireModuleWrite } from "@/lib/admin-auth";
 
 const MAX_SIZE_MB = 5;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_FOLDERS = ["products", "categories", "branding"];
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req);
+  const auth = await requireModuleWrite(req, "settings");
   if ("error" in auth && auth.error) return auth.error;
 
   const formData = await req.formData();

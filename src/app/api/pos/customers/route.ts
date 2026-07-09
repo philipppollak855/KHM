@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireModuleWrite } from "@/lib/admin-auth";
 import { getAdminAuth, getAdminFirestore } from "@/lib/firebase-admin";
 import { handleRouteError, parseJsonBody } from "@/lib/api-route";
 import type { Address } from "@/lib/types";
@@ -27,7 +27,7 @@ function normalizeSearch(q: string) {
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = await requireAdmin(req);
+    const auth = await requireModuleWrite(req, "pos");
     if ("error" in auth && auth.error) return auth.error;
 
     const q = normalizeSearch(req.nextUrl.searchParams.get("q") || "");
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await requireAdmin(req);
+    const auth = await requireModuleWrite(req, "pos");
     if ("error" in auth && auth.error) return auth.error;
 
     const body = await parseJsonBody(req);

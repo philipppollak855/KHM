@@ -19,12 +19,15 @@ import AdminSearchBar from "@/components/admin/AdminSearchBar";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminDataTable from "@/components/admin/AdminDataTable";
 import { matchesSearch } from "@/lib/search";
-import type { Product, Category } from "@/lib/types";
+import type { Product, Category, ProductVariant } from "@/lib/types";
 import { calculateSellingPrice, TAX_RATES_AT } from "@/lib/pricing";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import ImageUpload from "@/components/ui/ImageUpload";
+import ImageListUpload from "@/components/admin/ImageListUpload";
+import ProductVariantEditor from "@/components/admin/ProductVariantEditor";
+import { syncProductAggregates } from "@/lib/product-variants";
 
 const emptyProduct = {
   name: "",
@@ -38,6 +41,9 @@ const emptyProduct = {
   categoryId: "",
   stock: "",
   imageUrl: "",
+  galleryImages: [] as string[],
+  hasVariants: false,
+  variants: [] as ProductVariant[],
   active: true,
   featured: false,
 };
@@ -87,24 +93,41 @@ export default function AdminProductsPage() {
     const cost = parseFloat(form.costPrice) || 0;
     const markupPercent = parseFloat(form.markupPercent) || 0;
     const markupFixed = parseFloat(form.markupFixed) || 0;
-    const price =
-      form.priceMode === "calculated" && cost > 0
-        ? calculateSellingPrice(cost, markupPercent, markupFixed)
-        : parseFloat(form.price);
+    const variants = form.hasVariants
+      ? form.variants.map((variant, index) => ({
+          ...variant,
+          sortOrder: index,
+          imageUrl: variant.imageUrl || undefined,
+        }))
+      : [];
+
+    const aggregates =
+      form.hasVariants && variants.length > 0
+        ? syncProductAggregates(variants)
+        : {
+            price:
+              form.priceMode === "calculated" && cost > 0
+                ? calculateSellingPrice(cost, markupPercent, markupFixed)
+                : parseFloat(form.price),
+            stock: parseInt(form.stock, 10) || 0,
+          };
 
     const data = {
       name: form.name,
       slug: slugify(form.name),
       description: form.description,
-      price,
+      price: aggregates.price,
       costPrice: cost || undefined,
       markupPercent: markupPercent || undefined,
       markupFixed: markupFixed || undefined,
       priceMode: form.priceMode,
       taxRate: parseFloat(form.taxRate) || 20,
       categoryId: form.categoryId,
-      stock: parseInt(form.stock) || 0,
+      stock: aggregates.stock,
       imageUrl: form.imageUrl || undefined,
+      galleryImages: form.galleryImages.length ? form.galleryImages : undefined,
+      hasVariants: form.hasVariants && variants.length > 0,
+      variants: form.hasVariants && variants.length > 0 ? variants : undefined,
       active: form.active,
       featured: form.featured,
     };
@@ -134,6 +157,9 @@ export default function AdminProductsPage() {
       categoryId: product.categoryId,
       stock: product.stock.toString(),
       imageUrl: product.imageUrl || "",
+      galleryImages: product.galleryImages || [],
+      hasVariants: Boolean(product.hasVariants),
+      variants: product.variants || [],
       active: product.active,
       featured: product.featured,
     });
@@ -219,7 +245,10 @@ export default function AdminProductsPage() {
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value, priceMode: "manual" })}
               required={form.priceMode === "manual"}
-              disabled={form.priceMode === "calculated"}
+              disabled={
+                (form.hasVariants && form.variants.length > 0) ||
+                form.priceMode === "calculated"
+              }
             />
             <Input
               label="Einkaufspreis (€)"
@@ -286,13 +315,45 @@ export default function AdminProductsPage() {
               type="number"
               value={form.stock}
               onChange={(e) => setForm({ ...form, stock: e.target.value })}
+              disabled={form.hasVariants}
             />
           </div>
           <ImageUpload
             value={form.imageUrl}
             onChange={(url) => setForm({ ...form, imageUrl: url })}
             folder="products"
+            label="Hauptbild"
           />
+          <ImageListUpload
+            label="Zusätzliche Galeriebilder"
+            hint="Für Landingpage und Produktdetail – per Wischen durchblättern."
+            images={form.galleryImages}
+            onChange={(galleryImages) => setForm({ ...form, galleryImages })}
+          />
+          <div className="rounded-2xl border border-wood/10 bg-cream/60 p-4 space-y-4">
+            <label className="flex items-center gap-2 text-sm font-medium text-wood-dark">
+              <input
+                type="checkbox"
+                checked={form.hasVariants}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    hasVariants: e.target.checked,
+                    variants: e.target.checked && form.variants.length === 0
+                      ? form.variants
+                      : form.variants,
+                  })
+                }
+              />
+              Produkt mit Varianten (eigene Preise, Bilder & Lager)
+            </label>
+            {form.hasVariants && (
+              <ProductVariantEditor
+                variants={form.variants}
+                onChange={(variants) => setForm({ ...form, variants })}
+              />
+            )}
+          </div>
           <Textarea
             label="Beschreibung"
             value={form.description}

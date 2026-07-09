@@ -48,9 +48,11 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: iconUrl
       ? {
           icon: [{ url: iconUrl }],
-          apple: [{ url: iconUrl }],
+          apple: [{ url: iconUrl, sizes: "180x180" }],
         }
-      : undefined,
+      : {
+          apple: [{ url: "/icons/kassa-icon.svg" }],
+        },
     formatDetection: {
       telephone: false,
     },
