@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Kassa",
     description: "Mobile Kassa für Kevin's Handmade Manufactur",
     start_url: "/pos",
-    scope: "/pos",
+    scope: "/",
     display: "standalone",
     orientation: "portrait",
     background_color: "#2c2118",
