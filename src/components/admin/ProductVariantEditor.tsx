@@ -9,6 +9,7 @@ import ImageUpload from "@/components/ui/ImageUpload";
 
 interface ProductVariantEditorProps {
   variants: ProductVariant[];
+  productName?: string;
   onChange: (variants: ProductVariant[]) => void;
 }
 
@@ -24,6 +25,7 @@ const emptyVariant = (): ProductVariant => ({
 
 export default function ProductVariantEditor({
   variants,
+  productName = "",
   onChange,
 }: ProductVariantEditorProps) {
   const updateVariant = (id: string, patch: Partial<ProductVariant>) => {
@@ -152,6 +154,7 @@ export default function ProductVariantEditor({
                   folder="products"
                   label="Variantenbild"
                   hint="Wird in Shop und Galerie verwendet"
+                  libraryQuery={variant.name.trim() || productName}
                 />
               </div>
             </div>

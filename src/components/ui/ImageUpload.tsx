@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Upload, X, Loader2, RefreshCw } from "lucide-react";
+import { Upload, X, Loader2, RefreshCw, ImageIcon } from "lucide-react";
 import { uploadProductImage, uploadCategoryImage, uploadBrandingImage } from "@/lib/storage";
+import ImageLibraryPicker from "@/components/admin/ImageLibraryPicker";
 
 type UploadFolder = "products" | "categories" | "branding";
 
@@ -14,6 +15,8 @@ interface ImageUploadProps {
   label?: string;
   hint?: string;
   previewAspect?: "square" | "wide";
+  /** Titel/Name für Vorschläge aus der Internet-Bibliothek */
+  libraryQuery?: string;
 }
 
 export default function ImageUpload({
@@ -23,10 +26,13 @@ export default function ImageUpload({
   label = "Produktbild",
   hint,
   previewAspect = "square",
+  libraryQuery,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const showLibrary = Boolean(libraryQuery?.trim()) && folder === "products";
 
   const handleFile = async (file: File) => {
     setUploading(true);
@@ -69,7 +75,10 @@ export default function ImageUpload({
               alt="Vorschau"
               fill
               className={previewAspect === "wide" ? "object-contain p-2" : "object-cover"}
-              unoptimized={value.includes("firebasestorage")}
+              unoptimized={
+                value.includes("firebasestorage") ||
+                !value.includes("images.unsplash.com")
+              }
             />
             <button
               type="button"
@@ -80,37 +89,61 @@ export default function ImageUpload({
               <X className="w-4 h-4" />
             </button>
           </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-2 text-sm text-forest hover:underline disabled:opacity-50"
+            >
+              {uploading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Bild ersetzen
+            </button>
+            {showLibrary && (
+              <button
+                type="button"
+                onClick={() => setLibraryOpen((open) => !open)}
+                className="inline-flex items-center gap-2 text-sm text-wood-dark hover:text-forest hover:underline"
+              >
+                <ImageIcon className="w-4 h-4" />
+                {libraryOpen ? "Bibliothek ausblenden" : "Aus Internet-Bibliothek"}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center gap-2 text-sm text-forest hover:underline disabled:opacity-50"
+            className={emptyClass}
           >
             {uploading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-8 h-8 text-forest animate-spin" />
             ) : (
-              <RefreshCw className="w-4 h-4" />
+              <>
+                <Upload className="w-8 h-8 text-wood/40" />
+                <span className="text-sm text-wood-dark font-medium">Bild hochladen</span>
+                <span className="text-xs text-stone">JPEG, PNG, WebP · max. 5 MB</span>
+              </>
             )}
-            Bild ersetzen
           </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className={emptyClass}
-        >
-          {uploading ? (
-            <Loader2 className="w-8 h-8 text-forest animate-spin" />
-          ) : (
-            <>
-              <Upload className="w-8 h-8 text-wood/40" />
-              <span className="text-sm text-wood-dark font-medium">Bild hochladen</span>
-              <span className="text-xs text-stone">JPEG, PNG, WebP · max. 5 MB</span>
-            </>
+          {showLibrary && (
+            <button
+              type="button"
+              onClick={() => setLibraryOpen((open) => !open)}
+              className="inline-flex items-center gap-2 text-sm text-forest hover:underline"
+            >
+              <ImageIcon className="w-4 h-4" />
+              {libraryOpen ? "Bibliothek ausblenden" : "Aus Internet-Bibliothek wählen"}
+            </button>
           )}
-        </button>
+        </div>
       )}
 
       <input
@@ -133,6 +166,16 @@ export default function ImageUpload({
       />
 
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {showLibrary && libraryOpen && libraryQuery && (
+        <ImageLibraryPicker
+          initialQuery={libraryQuery}
+          onSelect={(url) => {
+            onChange(url);
+            setLibraryOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

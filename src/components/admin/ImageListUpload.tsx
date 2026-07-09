@@ -10,6 +10,7 @@ interface ImageListUploadProps {
   images: string[];
   onChange: (images: string[]) => void;
   folder?: "products";
+  libraryQuery?: string;
 }
 
 export default function ImageListUpload({
@@ -18,6 +19,7 @@ export default function ImageListUpload({
   images,
   onChange,
   folder = "products",
+  libraryQuery,
 }: ImageListUploadProps) {
   const addImage = (url: string) => {
     if (!url || images.includes(url)) return;
@@ -73,6 +75,7 @@ export default function ImageListUpload({
           folder={folder}
           label=""
           hint="Wird zur Galerie hinzugefügt"
+          libraryQuery={libraryQuery}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -89,17 +89,25 @@ export default function ProductFormPanel({
 }: ProductFormPanelProps) {
   const [activeTab, setActiveTab] = useState<TabId>("basics");
   const [mounted, setMounted] = useState(false);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
+    if (open) setActiveTab("basics");
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
 
-    setActiveTab("basics");
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !saving) onClose();
+      if (e.key === "Escape" && !saving) onCloseRef.current();
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
@@ -107,7 +115,7 @@ export default function ProductFormPanel({
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose, saving]);
+  }, [open, saving]);
 
   const calculatedPrice = useMemo(() => {
     const cost = parseFloat(form.costPrice) || 0;
@@ -351,12 +359,14 @@ export default function ProductFormPanel({
                   onChange={(url) => set({ imageUrl: url })}
                   folder="products"
                   label="Hauptbild"
+                  libraryQuery={form.name}
                 />
                 <ImageListUpload
                   label="Zusätzliche Galeriebilder"
                   hint="Für Landingpage und Produktdetail – per Wischen durchblättern."
                   images={form.galleryImages}
                   onChange={(galleryImages) => set({ galleryImages })}
+                  libraryQuery={form.name}
                 />
               </div>
             )}
@@ -374,6 +384,7 @@ export default function ProductFormPanel({
                 {form.hasVariants ? (
                   <ProductVariantEditor
                     variants={form.variants}
+                    productName={form.name}
                     onChange={(variants) => set({ variants })}
                   />
                 ) : (
