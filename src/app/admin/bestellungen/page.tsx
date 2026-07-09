@@ -11,6 +11,13 @@ import OrderBadges from "@/components/admin/OrderBadges";
 import { matchesSearch } from "@/lib/search";
 import { getOrderBadges } from "@/lib/badges";
 import { formatAdminCustomerName } from "@/lib/customer-display";
+import { isDateInRange, type PeriodPreset } from "@/lib/date-filters";
+import { computeOrderReport } from "@/lib/admin-reports";
+import AdminPeriodFilter, {
+  getActiveDateRange,
+  useDefaultCustomRange,
+} from "@/components/admin/AdminPeriodFilter";
+import AdminReportCards, { AdminFilterChips } from "@/components/admin/AdminReportCards";
 
 const statuses: Order["status"][] = [
   "pending", "confirmed", "processing", "shipped", "delivered", "cancelled",
@@ -26,10 +33,17 @@ const statusLabels: Record<Order["status"], string> = {
 };
 
 export default function AdminOrdersPage() {
+  const defaultRange = useDefaultCustomRange();
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("month");
+  const [customFrom, setCustomFrom] = useState(defaultRange.from);
+  const [customTo, setCustomTo] = useState(defaultRange.to);
   const [channelFilter, setChannelFilter] = useState<"all" | "pos" | "online">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "open" | "completed" | "cancelled"
+  >("all");
 
   const load = async () => {
     const [orderList, invoiceList] = await Promise.all([getOrders(), getInvoices()]);
@@ -47,15 +61,30 @@ export default function AdminOrdersPage() {
     return map;
   }, [invoices]);
 
+  const dateRange = useMemo(
+    () => getActiveDateRange(periodPreset, customFrom, customTo),
+    [periodPreset, customFrom, customTo]
+  );
+
   const filteredOrders = useMemo(
     () =>
       orders.filter((order) => {
+        if (!isDateInRange(order.createdAt, dateRange)) return false;
+
         const invoice = invoiceByOrderId.get(order.id);
         const badges = getOrderBadges(order, invoice);
         const isPos = badges.some((b) => b.key === "channel" && b.label === "POS");
         const isOnline = badges.some((b) => b.key === "channel" && b.label === "Webshop");
         if (channelFilter === "pos" && !isPos) return false;
         if (channelFilter === "online" && !isOnline) return false;
+
+        if (statusFilter === "open" && !["pending", "confirmed", "processing"].includes(order.status)) {
+          return false;
+        }
+        if (statusFilter === "completed" && !["shipped", "delivered"].includes(order.status)) {
+          return false;
+        }
+        if (statusFilter === "cancelled" && order.status !== "cancelled") return false;
 
         return matchesSearch(search, [
           order.orderNumber,
@@ -72,8 +101,53 @@ export default function AdminOrdersPage() {
           ...badges.map((b) => b.label),
         ]);
       }),
-    [orders, search, channelFilter, invoiceByOrderId]
+    [orders, search, channelFilter, statusFilter, dateRange, invoiceByOrderId]
   );
+
+  const report = useMemo(() => computeOrderReport(filteredOrders), [filteredOrders]);
+
+  const reportCards = [
+    {
+      label: "Aufträge",
+      value: String(report.count),
+      hint: `${report.activeCount} aktiv · ${report.cancelledCount} storniert`,
+    },
+    {
+      label: "Volumen",
+      value: formatPrice(report.volume),
+      hint: "Ohne Stornierte",
+    },
+    {
+      label: "Ø Bestellwert",
+      value: formatPrice(report.average),
+      hint: `${report.activeCount} aktive Bestellungen`,
+    },
+    {
+      label: "POS",
+      value: formatPrice(report.posVolume),
+      hint: `${report.posCount} Verkäufe`,
+    },
+    {
+      label: "Webshop",
+      value: formatPrice(report.onlineVolume),
+      hint: `${report.onlineCount} Bestellungen`,
+    },
+    {
+      label: "Offen",
+      value: String(
+        filteredOrders.filter((o) =>
+          ["pending", "confirmed", "processing"].includes(o.status)
+        ).length
+      ),
+      hint: "In Bearbeitung",
+      accent:
+        filteredOrders.some((o) =>
+          ["pending", "confirmed", "processing"].includes(o.status)
+        )
+          ? "border-amber-200/80"
+          : "",
+    },
+  ];
 
   const handleStatusChange = async (id: string, status: Order["status"]) => {
     await updateOrderStatus(id, status);
@@ -84,7 +158,39 @@ export default function AdminOrdersPage() {
     <div>
       <AdminPageHeader
         title="Bestellungen"
-        description="Auftragsbestätigung und Lieferschein bei Statusänderung"
+        description="Aufträge nach Zeitraum filtern, auswerten und bearbeiten"
+      />
+
+      <AdminPeriodFilter
+        preset={periodPreset}
+        onPresetChange={setPeriodPreset}
+        customFrom={customFrom}
+        customTo={customTo}
+        onCustomFromChange={setCustomFrom}
+        onCustomToChange={setCustomTo}
+      />
+
+      <AdminReportCards cards={reportCards} />
+
+      <AdminFilterChips
+        value={statusFilter}
+        onChange={setStatusFilter}
+        options={[
+          { id: "all", label: "Alle Status" },
+          { id: "open", label: "Offen" },
+          { id: "completed", label: "Abgeschlossen" },
+          { id: "cancelled", label: "Storniert" },
+        ]}
+      />
+
+      <AdminFilterChips
+        value={channelFilter}
+        onChange={setChannelFilter}
+        options={[
+          { id: "all", label: "Alle Kanäle" },
+          { id: "pos", label: "POS" },
+          { id: "online", label: "Webshop" },
+        ]}
       />
 
       <AdminSearchBar
@@ -94,27 +200,6 @@ export default function AdminOrdersPage() {
         resultCount={filteredOrders.length}
         totalCount={orders.length}
       />
-
-      <div className="flex flex-wrap gap-2 mb-6">
-        {[
-          { id: "all" as const, label: "Alle" },
-          { id: "pos" as const, label: "POS" },
-          { id: "online" as const, label: "Webshop" },
-        ].map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setChannelFilter(id)}
-            className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-              channelFilter === id
-                ? "bg-forest text-linen border-forest"
-                : "bg-linen text-stone border-wood/20 hover:border-forest/30"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
       <div className="space-y-4">
         {filteredOrders.map((order) => {

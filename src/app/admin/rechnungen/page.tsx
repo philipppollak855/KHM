@@ -12,6 +12,13 @@ import AdminDataTable from "@/components/admin/AdminDataTable";
 import { AdminBadgeList } from "@/components/admin/AdminBadge";
 import { getInvoiceBadges } from "@/lib/badges";
 import { matchesSearch } from "@/lib/search";
+import { isDateInRange, type PeriodPreset } from "@/lib/date-filters";
+import { computeInvoiceReport } from "@/lib/admin-reports";
+import AdminPeriodFilter, {
+  getActiveDateRange,
+  useDefaultCustomRange,
+} from "@/components/admin/AdminPeriodFilter";
+import AdminReportCards, { AdminFilterChips } from "@/components/admin/AdminReportCards";
 
 const statusLabels: Record<Invoice["status"], string> = {
   draft: "Entwurf",
@@ -46,8 +53,14 @@ function InvoiceStatusBadge({ inv }: { inv: Invoice }) {
 }
 
 export default function AdminInvoicesPage() {
+  const defaultRange = useDefaultCustomRange();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("month");
+  const [customFrom, setCustomFrom] = useState(defaultRange.from);
+  const [customTo, setCustomTo] = useState(defaultRange.to);
+  const [statusFilter, setStatusFilter] = useState<"all" | Invoice["status"]>("all");
+  const [channelFilter, setChannelFilter] = useState<"all" | "pos" | "online">("all");
   const [loading, setLoading] = useState(true);
   const [confirmingInvoice, setConfirmingInvoice] = useState<Invoice | null>(null);
   const [reference, setReference] = useState("");
@@ -67,10 +80,21 @@ export default function AdminInvoicesPage() {
     load().catch(console.error);
   }, []);
 
+  const dateRange = useMemo(
+    () => getActiveDateRange(periodPreset, customFrom, customTo),
+    [periodPreset, customFrom, customTo]
+  );
+
   const filteredInvoices = useMemo(
     () =>
-      invoices.filter((inv) =>
-        matchesSearch(search, [
+      invoices.filter((inv) => {
+        if (!isDateInRange(inv.issuedAt, dateRange)) return false;
+        if (statusFilter !== "all" && inv.status !== statusFilter) return false;
+        const isPos = inv.orderNumber.startsWith("POS-");
+        if (channelFilter === "pos" && !isPos) return false;
+        if (channelFilter === "online" && isPos) return false;
+
+        return matchesSearch(search, [
           inv.invoiceNumber,
           inv.orderNumber,
           inv.customerName,
@@ -78,13 +102,52 @@ export default function AdminInvoicesPage() {
           statusLabels[inv.status],
           inv.total,
           formatPrice(inv.total),
-        ])
-      ),
-    [invoices, search]
+        ]);
+      }),
+    [invoices, search, dateRange, statusFilter, channelFilter]
   );
 
-  const openInvoices = filteredInvoices.filter((i) => i.status === "sent");
-  const overdueInvoices = openInvoices.filter((i) => i.dueAt < new Date());
+  const report = useMemo(() => computeInvoiceReport(filteredInvoices), [filteredInvoices]);
+
+  const reportCards = [
+    {
+      label: "Rechnungen",
+      value: String(report.count),
+      hint: `${report.paidCount} bezahlt · ${report.openCount} offen`,
+    },
+    {
+      label: "Bezahlt",
+      value: formatPrice(report.paidAmount),
+      hint: `${report.paidCount} Rechnung(en)`,
+      accent: "border-green-200/80",
+    },
+    {
+      label: "Offen",
+      value: formatPrice(report.openAmount),
+      hint: `${report.openCount} Rechnung(en)`,
+      accent: report.openCount > 0 ? "border-amber-200/80" : "",
+    },
+    {
+      label: "Überfällig",
+      value: String(report.overdueCount),
+      hint: report.overdueCount > 0 ? formatPrice(
+        filteredInvoices
+          .filter((i) => i.status === "sent" && i.dueAt < new Date())
+          .reduce((s, i) => s + i.total, 0)
+      ) : "Keine überfälligen",
+      accent: report.overdueCount > 0 ? "border-red-200/80 bg-red-50/40" : "",
+    },
+    {
+      label: "Volumen",
+      value: formatPrice(report.totalVolume),
+      hint: "Ohne Stornierte",
+    },
+    {
+      label: "POS / Webshop",
+      value: `${report.posCount} / ${report.onlineCount}`,
+      hint: "Rechnungen im Zeitraum",
+    },
+  ];
 
   const handleConfirmPayment = async (invoiceId: string) => {
     setActionLoading(invoiceId);
@@ -159,25 +222,41 @@ export default function AdminInvoicesPage() {
     <div>
       <AdminPageHeader
         title="Rechnungen & Zahlungen"
-        description="Offene Rechnungen bestätigen, Mahnungen senden und PDFs herunterladen"
+        description="Zeitraum filtern, Kennzahlen auswerten und Zahlungen verwalten"
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div className="bg-cream border border-wood/10 p-3 sm:p-4">
-          <p className="text-[10px] sm:text-xs text-stone uppercase">Offen</p>
-          <p className="text-xl sm:text-2xl font-display text-wood-dark">{openInvoices.length}</p>
-        </div>
-        <div className="bg-cream border border-wood/10 p-3 sm:p-4">
-          <p className="text-[10px] sm:text-xs text-stone uppercase">Überfällig</p>
-          <p className="text-xl sm:text-2xl font-display text-red-700">{overdueInvoices.length}</p>
-        </div>
-        <div className="bg-cream border border-wood/10 p-3 sm:p-4 col-span-2 sm:col-span-1">
-          <p className="text-[10px] sm:text-xs text-stone uppercase">Offener Betrag</p>
-          <p className="text-xl sm:text-2xl font-display text-wood-dark">
-            {formatPrice(openInvoices.reduce((s, i) => s + i.total, 0))}
-          </p>
-        </div>
-      </div>
+      <AdminPeriodFilter
+        preset={periodPreset}
+        onPresetChange={setPeriodPreset}
+        customFrom={customFrom}
+        customTo={customTo}
+        onCustomFromChange={setCustomFrom}
+        onCustomToChange={setCustomTo}
+      />
+
+      <AdminReportCards cards={reportCards} />
+
+      <AdminFilterChips
+        value={statusFilter}
+        onChange={setStatusFilter}
+        options={[
+          { id: "all", label: "Alle Status" },
+          { id: "paid", label: "Bezahlt" },
+          { id: "sent", label: "Offen" },
+          { id: "draft", label: "Entwurf" },
+          { id: "cancelled", label: "Storniert" },
+        ]}
+      />
+
+      <AdminFilterChips
+        value={channelFilter}
+        onChange={setChannelFilter}
+        options={[
+          { id: "all", label: "Alle Kanäle" },
+          { id: "pos", label: "POS" },
+          { id: "online", label: "Webshop" },
+        ]}
+      />
 
       {actionError && (
         <p className="text-red-600 text-sm mb-4 bg-red-50 border border-red-100 p-3 rounded-lg">
