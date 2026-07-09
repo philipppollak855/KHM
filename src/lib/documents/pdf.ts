@@ -151,7 +151,10 @@ function downloadPdf(doc: jsPDF, filename: string) {
   doc.save(filename);
 }
 
-export function generateInvoicePdf(invoice: Invoice, company: CompanySettings) {
+export function buildInvoicePdfDocument(
+  invoice: Invoice,
+  company: CompanySettings
+): jsPDF {
   const doc = new jsPDF();
   drawLetterhead(doc, company, "RECHNUNG", invoice.invoiceNumber);
 
@@ -193,13 +196,34 @@ export function generateInvoicePdf(invoice: Invoice, company: CompanySettings) {
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
   doc.text(
-    "Zahlungsziel: 14 Tage netto. Vielen Dank für Ihren Einkauf bei KHM.",
+    "Vielen Dank für Ihren Einkauf bei KHM.",
     20,
     finalY + 30
   );
 
   drawFooter(doc, company);
+  return doc;
+}
+
+export function invoicePdfToBuffer(
+  invoice: Invoice,
+  company: CompanySettings
+): Buffer {
+  const doc = buildInvoicePdfDocument(invoice, company);
+  return Buffer.from(doc.output("arraybuffer"));
+}
+
+export function generateInvoicePdf(invoice: Invoice, company: CompanySettings) {
+  const doc = buildInvoicePdfDocument(invoice, company);
   downloadPdf(doc, `Rechnung_${invoice.invoiceNumber}.pdf`);
+}
+
+export function generateInvoicePdfBlob(
+  invoice: Invoice,
+  company: CompanySettings
+): Blob {
+  const doc = buildInvoicePdfDocument(invoice, company);
+  return doc.output("blob");
 }
 
 export function generateOrderConfirmationPdf(order: Order, company: CompanySettings) {

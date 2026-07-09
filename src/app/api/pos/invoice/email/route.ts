@@ -1,0 +1,56 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth";
+import { getAdminFirestore } from "@/lib/firebase-admin";
+import { getCompanySettingsServer } from "@/lib/company-server";
+import { invoicePdfToBuffer } from "@/lib/documents/pdf";
+import { sendInvoiceEmail, isEmailConfigured } from "@/lib/email";
+import type { Invoice } from "@/lib/types";
+import { formatPrice } from "@/lib/firestore";
+
+export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req);
+  if ("error" in auth && auth.error) return auth.error;
+
+  if (!isEmailConfigured()) {
+    return NextResponse.json(
+      { error: "E-Mail-Versand nicht konfiguriert (SMTP-Variablen fehlen)." },
+      { status: 503 }
+    );
+  }
+
+  const { invoiceId, email } = await req.json();
+  if (!invoiceId || !email) {
+    return NextResponse.json(
+      { error: "Rechnung und E-Mail erforderlich." },
+      { status: 400 }
+    );
+  }
+
+  const snap = await getAdminFirestore().collection("invoices").doc(invoiceId).get();
+  if (!snap.exists) {
+    return NextResponse.json({ error: "Rechnung nicht gefunden." }, { status: 404 });
+  }
+
+  const data = snap.data()!;
+  const invoice: Invoice = {
+    id: snap.id,
+    ...data,
+    issuedAt: data.issuedAt?.toDate?.() || new Date(),
+    dueAt: data.dueAt?.toDate?.() || new Date(),
+    paidAt: data.paidAt?.toDate?.(),
+  } as Invoice;
+
+  const company = await getCompanySettingsServer();
+  const pdfBuffer = invoicePdfToBuffer(invoice, company);
+
+  await sendInvoiceEmail({
+    to: email,
+    customerName: invoice.customerName,
+    invoiceNumber: invoice.invoiceNumber,
+    orderNumber: invoice.orderNumber,
+    total: formatPrice(invoice.total),
+    pdfBuffer,
+  });
+
+  return NextResponse.json({ success: true });
+}

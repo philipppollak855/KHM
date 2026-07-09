@@ -297,6 +297,7 @@ function mapInvoice(d: { id: string; data: () => Record<string, unknown> }): Inv
     issuedAt: toDate(data.issuedAt),
     dueAt: toDate(data.dueAt),
     paidAt: data.paidAt ? toDate(data.paidAt) : undefined,
+    lastReminderAt: data.lastReminderAt ? toDate(data.lastReminderAt) : undefined,
   } as Invoice;
 }
 

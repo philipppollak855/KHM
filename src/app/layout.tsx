@@ -3,8 +3,7 @@ import { Cormorant_Garamond, Lora } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import LayoutShell from "@/components/layout/LayoutShell";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -33,6 +32,16 @@ export const metadata: Metadata = {
     "Holz",
     "Natur",
   ],
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "KHM Kassa",
+  },
+};
+
+export const viewport = {
+  themeColor: "#3d4f32",
 };
 
 export default function RootLayout({
@@ -48,9 +57,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col wood-texture">
         <AuthProvider>
           <CartProvider>
-            <Header />
-            <main className="flex-1 pt-20">{children}</main>
-            <Footer />
+            <LayoutShell>{children}</LayoutShell>
           </CartProvider>
         </AuthProvider>
       </body>

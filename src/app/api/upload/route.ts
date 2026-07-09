@@ -1,52 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStorage } from "firebase-admin/storage";
-import { getAdminAuth, getAdminFirestore, hasAdminCredentials } from "@/lib/firebase-admin";
+import { requireAdmin } from "@/lib/admin-auth";
 
 const MAX_SIZE_MB = 5;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_FOLDERS = ["products", "categories"];
-
-async function requireAdmin(req: NextRequest) {
-  if (!hasAdminCredentials()) {
-    return {
-      error: NextResponse.json(
-        { error: "Server-Konfiguration unvollständig." },
-        { status: 503 }
-      ),
-    };
-  }
-
-  const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
-
-  if (!token) {
-    return {
-      error: NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 }),
-    };
-  }
-
-  try {
-    const decoded = await getAdminAuth().verifyIdToken(token);
-    const userDoc = await getAdminFirestore()
-      .collection("users")
-      .doc(decoded.uid)
-      .get();
-
-    if (!userDoc.exists || userDoc.data()?.role !== "admin") {
-      return {
-        error: NextResponse.json({ error: "Keine Admin-Berechtigung." }, { status: 403 }),
-      };
-    }
-
-    return { uid: decoded.uid };
-  } catch {
-    return {
-      error: NextResponse.json({ error: "Ungültiges Token." }, { status: 401 }),
-    };
-  }
-}
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin(req);

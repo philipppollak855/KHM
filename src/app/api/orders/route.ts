@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-auth";
 import { getAdminAuth, hasAdminCredentials } from "@/lib/firebase-admin";
 import {
   createOrderWithStockDeduction,

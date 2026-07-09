@@ -1,58 +1,71 @@
-import { FieldValue, type DocumentReference } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type DocumentReference } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
-import { buildOrderItemsFromCart, aggregateTaxBreakdown, roundCurrency } from "@/lib/pricing";
-import type { Address, CartItem } from "@/lib/types";
-import { createPaymentRecord, invoiceDueDate } from "@/lib/payments/payments-server";
+import {
+  buildOrderItemsFromCart,
+  aggregateTaxBreakdown,
+  roundCurrency,
+} from "@/lib/pricing";
+import type { Address, CartItem, PaymentMethod } from "@/lib/types";
+import { InsufficientStockError } from "./createOrderServer";
+import {
+  createPaymentRecord,
+  invoiceDueDate,
+  isImmediatePayment,
+} from "@/lib/payments/payments-server";
 
-export class InsufficientStockError extends Error {
-  constructor(
-    public productName: string,
-    public available: number,
-    public requested: number
-  ) {
-    super(
-      `Nicht genug Lagerbestand für „${productName}“ (verfügbar: ${available}, bestellt: ${requested}).`
-    );
-    this.name = "InsufficientStockError";
-  }
-}
+const DEFAULT_POS_ADDRESS: Address = {
+  street: "Abholung vor Ort",
+  city: "Puchberg am Schneeberg",
+  zip: "2734",
+  country: "Österreich",
+};
 
-export async function createOrderWithStockDeduction(data: {
-  userId: string;
+export async function createPosOrder(data: {
+  adminUserId: string;
+  customerUserId?: string | null;
   customerName: string;
-  customerEmail: string;
+  customerEmail?: string;
+  address?: Partial<Address>;
   cartItems: CartItem[];
-  shipping: number;
-  shippingAddress: Address;
+  paymentMethod: PaymentMethod;
   notes?: string;
-  distanceKm?: number;
+  cardReference?: string;
 }) {
+  if (data.paymentMethod === "bank_transfer" && !data.customerUserId) {
+    throw new Error("Überweisung ist nur mit Kundenkonto möglich.");
+  }
+
   const db = getAdminFirestore();
   const items = buildOrderItemsFromCart(data.cartItems);
   const subtotalGross = roundCurrency(items.reduce((s, i) => s + i.grossAmount, 0));
   const subtotalNet = roundCurrency(items.reduce((s, i) => s + i.netAmount, 0));
   const taxTotal = roundCurrency(items.reduce((s, i) => s + i.taxAmount, 0));
   const taxBreakdown = aggregateTaxBreakdown(items);
-  const total = roundCurrency(subtotalGross + data.shipping);
-  const orderNumber = `KHM-${Date.now().toString(36).toUpperCase()}`;
+  const shipping = 0;
+  const total = roundCurrency(subtotalGross + shipping);
+  const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}`;
   const invoiceNumber = `RE-${Date.now().toString(36).toUpperCase()}`;
+  const paidNow = isImmediatePayment(data.paymentMethod);
+
+  const shippingAddress: Address = {
+    street: data.address?.street || DEFAULT_POS_ADDRESS.street,
+    city: data.address?.city || DEFAULT_POS_ADDRESS.city,
+    zip: data.address?.zip || DEFAULT_POS_ADDRESS.zip,
+    country: data.address?.country || DEFAULT_POS_ADDRESS.country,
+  };
 
   const totalsByProduct = new Map<string, { name: string; quantity: number }>();
   for (const item of data.cartItems) {
     const existing = totalsByProduct.get(item.productId);
-    if (existing) {
-      existing.quantity += item.quantity;
-    } else {
-      totalsByProduct.set(item.productId, {
-        name: item.name,
-        quantity: item.quantity,
-      });
-    }
+    if (existing) existing.quantity += item.quantity;
+    else totalsByProduct.set(item.productId, { name: item.name, quantity: item.quantity });
   }
 
   const orderRef = db.collection("orders").doc();
   const invoiceRef = db.collection("invoices").doc();
   const paymentRef = db.collection("payments").doc();
+  const userId = data.customerUserId || `pos-walkin-${orderRef.id}`;
+  const customerEmail = data.customerEmail || "";
 
   await db.runTransaction(async (tx) => {
     const productUpdates: {
@@ -65,9 +78,7 @@ export async function createOrderWithStockDeduction(data: {
     for (const [productId, { name, quantity }] of totalsByProduct) {
       const productRef = db.collection("products").doc(productId);
       const snap = await tx.get(productRef);
-      if (!snap.exists) {
-        throw new Error(`Produkt „${name}“ nicht gefunden.`);
-      }
+      if (!snap.exists) throw new Error(`Produkt „${name}“ nicht gefunden.`);
       const stock = (snap.data()?.stock as number) ?? 0;
       if (stock < quantity) {
         throw new InsufficientStockError(name, stock, quantity);
@@ -81,24 +92,25 @@ export async function createOrderWithStockDeduction(data: {
     }
 
     tx.set(orderRef, {
-      userId: data.userId,
+      userId,
       customerName: data.customerName,
-      customerEmail: data.customerEmail,
+      customerEmail,
       items,
       subtotalNet,
       subtotalGross,
       taxTotal,
-      shipping: data.shipping,
+      shipping,
       total,
       orderNumber,
-      status: "confirmed",
-      shippingAddress: data.shippingAddress,
+      status: "delivered",
+      shippingAddress,
       notes: data.notes || null,
-      distanceKm: data.distanceKm || null,
+      distanceKm: null,
       stockDeducted: true,
       invoiceId: invoiceRef.id,
-      channel: "online",
-      paymentMethod: "bank_transfer",
+      channel: "pos",
+      paymentMethod: data.paymentMethod,
+      createdByAdmin: data.adminUserId,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -107,21 +119,22 @@ export async function createOrderWithStockDeduction(data: {
       invoiceNumber,
       orderId: orderRef.id,
       orderNumber,
-      userId: data.userId,
+      userId,
       customerName: data.customerName,
-      customerEmail: data.customerEmail,
+      customerEmail,
       items,
       subtotalNet,
       subtotalGross,
       taxTotal,
       taxBreakdown,
-      shipping: data.shipping,
+      shipping,
       total,
-      status: "sent",
-      paymentMethod: "bank_transfer",
-      shippingAddress: data.shippingAddress,
+      status: paidNow ? "paid" : "sent",
+      paymentMethod: data.paymentMethod,
+      shippingAddress,
       issuedAt: FieldValue.serverTimestamp(),
-      dueAt: invoiceDueDate(14),
+      dueAt: paidNow ? Timestamp.fromDate(new Date()) : invoiceDueDate(14),
+      paidAt: paidNow ? FieldValue.serverTimestamp() : null,
       reminderLevel: 0,
     });
 
@@ -131,14 +144,20 @@ export async function createOrderWithStockDeduction(data: {
       orderId: orderRef.id,
       orderNumber,
       invoiceNumber,
-      userId: data.userId,
+      userId,
       customerName: data.customerName,
-      customerEmail: data.customerEmail,
+      customerEmail,
       amount: total,
-      method: "bank_transfer",
-      status: "pending",
+      method: data.paymentMethod,
+      status: paidNow ? "completed" : "pending",
       source: "automatic",
-      notes: "Online-Bestellung – Überweisung offen",
+      reference: data.cardReference || undefined,
+      notes: paidNow
+        ? data.paymentMethod === "card"
+          ? "SumUp Kartenzahlung"
+          : "Barzahlung POS"
+        : "Überweisung – offen",
+      confirmedBy: paidNow ? data.adminUserId : undefined,
     });
 
     for (const update of productUpdates) {
@@ -152,8 +171,8 @@ export async function createOrderWithStockDeduction(data: {
         reason: "order",
         orderId: orderRef.id,
         orderNumber,
-        note: null,
-        createdBy: data.userId,
+        note: "POS-Verkauf",
+        createdBy: data.adminUserId,
         createdAt: FieldValue.serverTimestamp(),
       });
     }
@@ -163,5 +182,10 @@ export async function createOrderWithStockDeduction(data: {
     orderId: orderRef.id,
     orderNumber,
     invoiceId: invoiceRef.id,
+    invoiceNumber,
+    paymentId: paymentRef.id,
+    total,
+    paymentStatus: paidNow ? ("paid" as const) : ("pending" as const),
+    paymentMethod: data.paymentMethod,
   };
 }

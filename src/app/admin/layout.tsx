@@ -16,11 +16,14 @@ import {
   Settings,
   Boxes,
   Mail,
+  Smartphone,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const adminNav = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/pos", icon: Smartphone, label: "Kassa (POS)" },
   { href: "/admin/bestellungen", icon: ShoppingCart, label: "Bestellungen" },
   { href: "/admin/lager", icon: Boxes, label: "Lager" },
   { href: "/admin/produkte", icon: Package, label: "Produkte" },
@@ -28,6 +31,7 @@ const adminNav = [
   { href: "/admin/kunden", icon: Users, label: "Kunden" },
   { href: "/admin/kontaktanfragen", icon: Mail, label: "Kontaktanfragen" },
   { href: "/admin/rechnungen", icon: FileText, label: "Rechnungen" },
+  { href: "/admin/mahnungen", icon: AlertTriangle, label: "Mahnwesen" },
   { href: "/admin/versand", icon: Truck, label: "Versand" },
   { href: "/admin/einstellungen", icon: Settings, label: "Einstellungen" },
 ];

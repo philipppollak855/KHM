@@ -66,6 +66,11 @@ export type OrderStatus =
   | "delivered"
   | "cancelled";
 
+export type OrderChannel = "online" | "pos";
+export type PaymentMethod = "cash" | "card" | "bank_transfer";
+export type PaymentStatus = "pending" | "completed" | "failed" | "cancelled";
+export type PaymentSource = "automatic" | "manual";
+
 export interface OrderItem {
   productId: string;
   name: string;
@@ -104,6 +109,9 @@ export interface Order {
   distanceKm?: number;
   stockDeducted?: boolean;
   stockRestocked?: boolean;
+  channel?: OrderChannel;
+  paymentMethod?: PaymentMethod;
+  createdByAdmin?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -130,6 +138,29 @@ export interface Invoice {
   issuedAt: Date;
   dueAt: Date;
   paidAt?: Date;
+  paymentMethod?: PaymentMethod;
+  reminderLevel?: number;
+  lastReminderAt?: Date;
+}
+
+export interface Payment {
+  id: string;
+  invoiceId: string;
+  orderId: string;
+  orderNumber: string;
+  invoiceNumber: string;
+  userId: string;
+  customerName: string;
+  customerEmail: string;
+  amount: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  source: PaymentSource;
+  reference?: string;
+  notes?: string;
+  confirmedBy?: string;
+  confirmedAt?: Date;
+  createdAt: Date;
 }
 
 export interface DeliveryNote {
@@ -218,6 +249,25 @@ export interface ContactInquiry {
   message: string;
   status: ContactInquiryStatus;
   createdAt: Date;
+}
+
+export interface PosCustomer {
+  id: string | null;
+  name: string;
+  email: string;
+  address?: Address;
+  isWalkIn: boolean;
+  isNewAccount?: boolean;
+}
+
+export interface PosCartItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  taxRate: number;
+  imageUrl?: string;
+  maxStock: number;
 }
 
 export const LOW_STOCK_THRESHOLD = 5;
