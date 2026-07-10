@@ -4,6 +4,7 @@ import type { PermissionModule, TeamPermissions } from "@/lib/types";
 import {
   PERMISSION_MODULE_DEFS,
   createEmptyPermissions,
+  createFullPermissions,
   normalizePermissions,
 } from "@/lib/permissions";
 
@@ -95,4 +96,4 @@ export default function PermissionMatrix({
   );
 }
 
-export { createEmptyPermissions };
+export { createEmptyPermissions, createFullPermissions };

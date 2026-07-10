@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { getInvoices, formatPrice, formatDate } from "@/lib/firestore";
+import { getInvoices, getOrders, formatPrice, formatDate } from "@/lib/firestore";
 import { downloadInvoicePdf, printInvoicePdf } from "@/lib/documents/download";
 import { confirmInvoicePayment, sendInvoiceReminder } from "@/lib/admin-api";
 import type { Invoice, PaymentMethod } from "@/lib/types";
@@ -25,6 +25,7 @@ import {
   getInvoiceListHref,
   parseInvoiceListUrlFilters,
 } from "@/lib/admin-invoice-filters";
+import { useTeamDataFilters } from "@/hooks/useTeamDataFilters";
 
 const statusLabels: Record<Invoice["status"], string> = {
   draft: "Entwurf",
@@ -64,6 +65,7 @@ export default function AdminInvoicesPage() {
 
 function AdminInvoicesPageContent() {
   const searchParams = useSearchParams();
+  const { filterInvoices } = useTeamDataFilters();
   const defaultRange = useDefaultCustomRange();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState("");
@@ -82,7 +84,8 @@ function AdminInvoicesPageContent() {
   const load = async () => {
     setLoading(true);
     try {
-      setInvoices(await getInvoices());
+      const [invoiceList, orderList] = await Promise.all([getInvoices(), getOrders()]);
+      setInvoices(filterInvoices(invoiceList, orderList));
     } finally {
       setLoading(false);
     }

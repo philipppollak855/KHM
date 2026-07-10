@@ -10,9 +10,11 @@ import CustomerBadges from "@/components/admin/CustomerBadges";
 import CustomerDetailPanel from "@/components/admin/CustomerDetailPanel";
 import { buildCustomerStats } from "@/lib/badges";
 import { matchesSearch } from "@/lib/search";
+import { useTeamDataFilters } from "@/hooks/useTeamDataFilters";
 import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
 
 export default function AdminCustomersPage() {
+  const { filterCustomers, filterOrders, filterInvoices } = useTeamDataFilters();
   const [customers, setCustomers] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -26,12 +28,18 @@ export default function AdminCustomersPage() {
   useEffect(() => {
     Promise.all([getUsers(), getOrders(), getInvoices()])
       .then(([users, orderList, invoiceList]) => {
-        setCustomers(users.filter((u) => u.role === "customer"));
-        setOrders(orderList);
-        setInvoices(invoiceList);
+        const scopedOrders = filterOrders(orderList);
+        setCustomers(
+          filterCustomers(
+            users.filter((u) => u.role === "customer"),
+            orderList
+          )
+        );
+        setOrders(scopedOrders);
+        setInvoices(filterInvoices(invoiceList, orderList));
       })
       .catch(console.error);
-  }, []);
+  }, [filterCustomers, filterOrders, filterInvoices]);
 
   const statsByUserId = useMemo(() => {
     const map = new Map<string, ReturnType<typeof buildCustomerStats>>();

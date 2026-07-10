@@ -19,9 +19,11 @@ import AdminPeriodFilter, {
   useDefaultCustomRange,
 } from "@/components/admin/AdminPeriodFilter";
 import AdminReportCards, { AdminFilterChips } from "@/components/admin/AdminReportCards";
+import { useTeamDataFilters } from "@/hooks/useTeamDataFilters";
 import { usePwaOverlayBack } from "@/hooks/usePwaBackNavigation";
 
 export default function AdminOrdersPage() {
+  const { filterOrders } = useTeamDataFilters();
   const defaultRange = useDefaultCustomRange();
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -59,9 +61,11 @@ export default function AdminOrdersPage() {
     [periodPreset, customFrom, customTo]
   );
 
+  const scopedOrders = useMemo(() => filterOrders(orders), [orders, filterOrders]);
+
   const filteredOrders = useMemo(
     () =>
-      orders.filter((order) => {
+      scopedOrders.filter((order) => {
         if (!isDateInRange(order.createdAt, dateRange)) return false;
 
         const invoice = invoiceByOrderId.get(order.id);
@@ -95,7 +99,7 @@ export default function AdminOrdersPage() {
           ...badges.map((b) => b.label),
         ]);
       }),
-    [orders, search, channelFilter, statusFilter, dateRange, invoiceByOrderId]
+    [scopedOrders, search, channelFilter, statusFilter, dateRange, invoiceByOrderId]
   );
 
   const report = useMemo(() => computeOrderReport(filteredOrders), [filteredOrders]);

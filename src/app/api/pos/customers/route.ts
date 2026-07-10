@@ -133,6 +133,8 @@ export async function POST(req: NextRequest) {
           displayName: name,
           role: "customer",
           address: address || null,
+          createdByAdmin: auth.uid,
+          createdByAdminName: auth.displayName || "Team",
           createdAt: FieldValue.serverTimestamp(),
         });
 

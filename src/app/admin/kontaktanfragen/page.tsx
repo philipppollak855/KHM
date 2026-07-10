@@ -12,6 +12,8 @@ import type { ContactInquiry, ContactInquiryStatus } from "@/lib/types";
 import Button from "@/components/ui/Button";
 import AdminSearchBar from "@/components/admin/AdminSearchBar";
 import { matchesSearch } from "@/lib/search";
+import { useAuth } from "@/context/AuthContext";
+import { useTeamDataFilters } from "@/hooks/useTeamDataFilters";
 
 const statusLabels: Record<ContactInquiryStatus, string> = {
   new: "Neu",
@@ -21,12 +23,14 @@ const statusLabels: Record<ContactInquiryStatus, string> = {
 };
 
 export default function AdminContactInquiriesPage() {
+  const { user } = useAuth();
+  const { filterInquiries } = useTeamDataFilters();
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
   const [selected, setSelected] = useState<ContactInquiry | null>(null);
   const [search, setSearch] = useState("");
 
   const load = async () => {
-    const data = await getContactInquiries();
+    const data = filterInquiries(await getContactInquiries());
     setInquiries(data);
     if (selected) {
       const updated = data.find((i) => i.id === selected.id);
@@ -55,7 +59,10 @@ export default function AdminContactInquiriesPage() {
   const handleSelect = async (inquiry: ContactInquiry) => {
     setSelected(inquiry);
     if (inquiry.status === "new") {
-      await updateContactInquiryStatus(inquiry.id, "read");
+      await updateContactInquiryStatus(inquiry.id, "read", {
+        assignedToAdmin: inquiry.assignedToAdmin || user?.id,
+        assignedToAdminName: inquiry.assignedToAdminName || user?.displayName,
+      });
       await load();
     }
   };

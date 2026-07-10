@@ -11,7 +11,10 @@ import type { PermissionModule, TeamPermissions, UserRole } from "@/lib/types";
 export interface StaffAuthContext {
   uid: string;
   role: UserRole;
+  displayName?: string;
   permissions?: TeamPermissions;
+  teamFullAccess?: boolean;
+  teamDataScope?: "own" | "all";
 }
 
 async function verifyStaffToken(req: NextRequest) {
@@ -72,7 +75,13 @@ async function verifyStaffToken(req: NextRequest) {
     return {
       uid: decoded.uid,
       role,
+      displayName:
+        typeof data.displayName === "string" && data.displayName.trim()
+          ? data.displayName.trim()
+          : "Team",
       permissions: parsePermissionsFromFirestore(data.permissions),
+      teamFullAccess: data.teamFullAccess === true,
+      teamDataScope: data.teamDataScope === "own" ? "own" : "all",
     } satisfies StaffAuthContext;
   } catch {
     return {

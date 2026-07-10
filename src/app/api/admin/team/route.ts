@@ -3,8 +3,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminFirestore } from "@/lib/firebase-admin";
 import { requireOwner } from "@/lib/admin-auth";
 import { handleRouteError, parseJsonBody } from "@/lib/api-route";
-import { normalizePermissions, sanitizePermissionsForSave } from "@/lib/permissions";
-import type { TeamPermissions } from "@/lib/types";
+import { normalizePermissions, sanitizePermissionsForSave, createFullPermissions } from "@/lib/permissions";
+import type { TeamDataScope, TeamPermissions } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,9 +16,25 @@ function mapTeamMember(id: string, data: FirebaseFirestore.DocumentData) {
     displayName: data.displayName as string,
     role: data.role as string,
     permissions: data.permissions as TeamPermissions | undefined,
+    teamFullAccess: data.teamFullAccess === true,
+    teamDataScope: (data.teamDataScope === "own" ? "own" : "all") as TeamDataScope,
     active: data.active !== false,
     createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? null,
   };
+}
+
+function parseTeamAccess(body: Record<string, unknown>) {
+  const teamFullAccess = body.teamFullAccess === true;
+  const teamDataScope: TeamDataScope =
+    body.teamDataScope === "own" ? "own" : "all";
+  const permissions = sanitizePermissionsForSave(
+    normalizePermissions(
+      (teamFullAccess
+        ? createFullPermissions()
+        : body.permissions) as Partial<TeamPermissions> | undefined
+    )
+  );
+  return { teamFullAccess, teamDataScope, permissions };
 }
 
 export async function GET(req: NextRequest) {
@@ -52,9 +68,7 @@ export async function POST(req: NextRequest) {
     const email = String(body.email || "").trim().toLowerCase();
     const displayName = String(body.displayName || "").trim();
     const password = String(body.password || "");
-    const permissions = sanitizePermissionsForSave(
-      normalizePermissions(body.permissions as Partial<TeamPermissions> | undefined)
-    );
+    const { teamFullAccess, teamDataScope, permissions } = parseTeamAccess(body);
 
     if (!email || !displayName || password.length < 8) {
       return NextResponse.json(
@@ -74,6 +88,8 @@ export async function POST(req: NextRequest) {
       displayName,
       role: "team",
       permissions,
+      teamFullAccess,
+      teamDataScope,
       active: true,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -85,6 +101,8 @@ export async function POST(req: NextRequest) {
         displayName,
         role: "team",
         permissions,
+        teamFullAccess,
+        teamDataScope,
         active: true,
       },
     });
@@ -142,10 +160,21 @@ export async function PATCH(req: NextRequest) {
       await getAdminAuth().updateUser(userId, { password });
     }
 
-    if (body.permissions !== undefined) {
-      updates.permissions = sanitizePermissionsForSave(
-        normalizePermissions(body.permissions as Partial<TeamPermissions> | undefined)
-      );
+    if (
+      body.permissions !== undefined ||
+      body.teamFullAccess !== undefined ||
+      body.teamDataScope !== undefined
+    ) {
+      const access = parseTeamAccess({
+        permissions: body.permissions ?? data.permissions,
+        teamFullAccess:
+          body.teamFullAccess !== undefined ? body.teamFullAccess : data.teamFullAccess,
+        teamDataScope:
+          body.teamDataScope !== undefined ? body.teamDataScope : data.teamDataScope,
+      });
+      updates.permissions = access.permissions;
+      updates.teamFullAccess = access.teamFullAccess;
+      updates.teamDataScope = access.teamDataScope;
     }
 
     if (body.active !== undefined) {

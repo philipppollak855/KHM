@@ -32,6 +32,7 @@ import StockInboundButton from "@/components/admin/StockInboundButton";
 import OrderBadges from "@/components/admin/OrderBadges";
 import Button from "@/components/ui/Button";
 import { formatAdminCustomerName } from "@/lib/customer-display";
+import { useTeamDataFilters } from "@/hooks/useTeamDataFilters";
 
 const statusLabels: Record<Order["status"], string> = {
   pending: "Ausstehend",
@@ -50,6 +51,8 @@ const inquiryStatusLabels = {
 };
 
 export default function AdminDashboard() {
+  const { filterOrders, filterInvoices, filterInquiries, filterCustomers } =
+    useTeamDataFilters();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -81,19 +84,27 @@ export default function AdminDashboard() {
         ]);
 
       setProducts(allProducts);
-      setOrders(allOrders);
-      setInvoices(invoices);
-      setInquiries(allInquiries);
+      const scopedOrders = filterOrders(allOrders);
+      const scopedInvoices = filterInvoices(invoices, allOrders);
+      const scopedInquiries = filterInquiries(allInquiries);
+      const customerUsers = filterCustomers(
+        users.filter((u) => u.role === "customer"),
+        allOrders
+      );
 
-      const revenue = invoices
+      setOrders(scopedOrders);
+      setInvoices(scopedInvoices);
+      setInquiries(scopedInquiries);
+
+      const revenue = scopedInvoices
         .filter((i) => i.status === "paid")
         .reduce((sum, i) => sum + i.total, 0);
 
-      const orderVolume = allOrders
+      const orderVolume = scopedOrders
         .filter((o) => o.status !== "cancelled")
         .reduce((sum, o) => sum + o.total, 0);
 
-      const openOrders = allOrders.filter((o) =>
+      const openOrders = scopedOrders.filter((o) =>
         ["pending", "confirmed", "processing"].includes(o.status)
       ).length;
 
@@ -101,10 +112,10 @@ export default function AdminDashboard() {
         (p) => p.active && p.stock <= LOW_STOCK_THRESHOLD
       ).length;
 
-      const newInquiries = allInquiries.filter((i) => i.status === "new").length;
+      const newInquiries = scopedInquiries.filter((i) => i.status === "new").length;
 
       setStats({
-        customers: users.filter((u) => u.role === "customer").length,
+        customers: customerUsers.length,
         revenue,
         orderVolume,
         openOrders,
@@ -116,7 +127,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterOrders, filterInvoices, filterInquiries, filterCustomers]);
 
   useEffect(() => {
     load();

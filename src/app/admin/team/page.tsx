@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, Shield, Trash2, UserCog } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
-import PermissionMatrix, { createEmptyPermissions } from "@/components/admin/PermissionMatrix";
+import PermissionMatrix, {
+  createEmptyPermissions,
+  createFullPermissions,
+} from "@/components/admin/PermissionMatrix";
+import TeamAccessOptions from "@/components/admin/TeamAccessOptions";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import {
@@ -14,8 +18,8 @@ import {
   updateTeamMember,
   type TeamMemberPayload,
 } from "@/lib/admin-api";
-import { normalizePermissions } from "@/lib/permissions";
-import type { TeamPermissions } from "@/lib/types";
+import { normalizePermissions, hasTeamFullAccess } from "@/lib/permissions";
+import type { TeamDataScope, TeamPermissions } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminTeamPage() {
@@ -34,12 +38,16 @@ export default function AdminTeamPage() {
     displayName: "",
     password: "",
     permissions: createEmptyPermissions(),
+    teamFullAccess: false,
+    teamDataScope: "all" as TeamDataScope,
   });
 
   const [editForm, setEditForm] = useState({
     displayName: "",
     password: "",
     permissions: createEmptyPermissions(),
+    teamFullAccess: false,
+    teamDataScope: "all" as TeamDataScope,
     active: true,
   });
 
@@ -75,6 +83,8 @@ export default function AdminTeamPage() {
       displayName: member.displayName,
       password: "",
       permissions: normalizePermissions(member.permissions),
+      teamFullAccess: member.teamFullAccess === true,
+      teamDataScope: member.teamDataScope === "own" ? "own" : "all",
       active: member.active,
     });
     setShowCreate(false);
@@ -88,12 +98,19 @@ export default function AdminTeamPage() {
     setMessage("");
     setError("");
     try {
-      await createTeamMember(createForm);
+      await createTeamMember({
+        ...createForm,
+        permissions: createForm.teamFullAccess
+          ? createFullPermissions()
+          : createForm.permissions,
+      });
       setCreateForm({
         email: "",
         displayName: "",
         password: "",
         permissions: createEmptyPermissions(),
+        teamFullAccess: false,
+        teamDataScope: "all",
       });
       setShowCreate(false);
       setMessage("Team-Zugang erstellt.");
@@ -115,7 +132,11 @@ export default function AdminTeamPage() {
       await updateTeamMember({
         userId: editingId,
         displayName: editForm.displayName,
-        permissions: editForm.permissions,
+        permissions: editForm.teamFullAccess
+          ? createFullPermissions()
+          : editForm.permissions,
+        teamFullAccess: editForm.teamFullAccess,
+        teamDataScope: editForm.teamDataScope,
         active: editForm.active,
         ...(editForm.password ? { password: editForm.password } : {}),
       });
@@ -218,9 +239,24 @@ export default function AdminTeamPage() {
               required
             />
           </div>
+          <TeamAccessOptions
+            fullAccess={createForm.teamFullAccess}
+            dataScope={createForm.teamDataScope}
+            onFullAccessChange={(teamFullAccess) =>
+              setCreateForm((form) => ({
+                ...form,
+                teamFullAccess,
+                permissions: teamFullAccess ? createFullPermissions() : form.permissions,
+              }))
+            }
+            onDataScopeChange={(teamDataScope) =>
+              setCreateForm((form) => ({ ...form, teamDataScope }))
+            }
+          />
           <PermissionMatrix
             value={createForm.permissions}
             onChange={(permissions) => setCreateForm({ ...createForm, permissions })}
+            disabled={createForm.teamFullAccess}
           />
           <div className="flex gap-3">
             <Button type="submit" disabled={saving}>
@@ -262,11 +298,26 @@ export default function AdminTeamPage() {
             />
             Zugang aktiv
           </label>
+          <TeamAccessOptions
+            fullAccess={editForm.teamFullAccess}
+            dataScope={editForm.teamDataScope}
+            onFullAccessChange={(teamFullAccess) =>
+              setEditForm((form) => ({
+                ...form,
+                teamFullAccess,
+                permissions: teamFullAccess ? createFullPermissions() : form.permissions,
+              }))
+            }
+            onDataScopeChange={(teamDataScope) =>
+              setEditForm((form) => ({ ...form, teamDataScope }))
+            }
+          />
           <PermissionMatrix
             value={editForm.permissions}
             onChange={(permissions: TeamPermissions) =>
               setEditForm({ ...editForm, permissions })
             }
+            disabled={editForm.teamFullAccess}
           />
           <div className="flex gap-3">
             <Button type="submit" disabled={saving}>
@@ -318,13 +369,22 @@ export default function AdminTeamPage() {
                   <p className="font-medium text-wood-dark">{member.displayName}</p>
                   <p className="text-sm text-stone break-all">{member.email}</p>
                   <p className="text-xs text-stone mt-1">
-                    {member.active ? "Aktiv" : "Deaktiviert"} ·{" "}
-                    {
-                      Object.values(normalizePermissions(member.permissions)).filter(
-                        (p) => p.read
-                      ).length
-                    }{" "}
-                    Module mit Lesezugriff
+                    {member.active ? "Aktiv" : "Deaktiviert"}
+                    {hasTeamFullAccess({ role: "team", teamFullAccess: member.teamFullAccess })
+                      ? " · Vollzugriff"
+                      : ""}
+                    {member.teamDataScope === "own" ? " · Nur eigene Daten" : " · Alle Team-Daten"}
+                    {!hasTeamFullAccess({ role: "team", teamFullAccess: member.teamFullAccess }) && (
+                      <>
+                        {" · "}
+                        {
+                          Object.values(normalizePermissions(member.permissions)).filter(
+                            (p) => p.read
+                          ).length
+                        }{" "}
+                        Module mit Lesezugriff
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

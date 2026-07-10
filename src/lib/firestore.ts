@@ -494,6 +494,8 @@ function mapContactInquiry(d: {
     subject: data.subject as string,
     message: data.message as string,
     status: (data.status as ContactInquiryStatus) || "new",
+    assignedToAdmin: data.assignedToAdmin as string | undefined,
+    assignedToAdminName: data.assignedToAdminName as string | undefined,
     createdAt: toDate(data.createdAt),
   };
 }
@@ -527,9 +529,17 @@ export async function getContactInquiries(): Promise<ContactInquiry[]> {
 
 export async function updateContactInquiryStatus(
   id: string,
-  status: ContactInquiryStatus
+  status: ContactInquiryStatus,
+  options?: { assignedToAdmin?: string; assignedToAdminName?: string }
 ) {
-  return updateDoc(doc(db, "contactInquiries", id), { status });
+  const updates: Record<string, unknown> = { status };
+  if (options?.assignedToAdmin) {
+    updates.assignedToAdmin = options.assignedToAdmin;
+    if (options.assignedToAdminName) {
+      updates.assignedToAdminName = options.assignedToAdminName;
+    }
+  }
+  return updateDoc(doc(db, "contactInquiries", id), updates);
 }
 
 // ─── Stock Movements ──────────────────────────────────────────

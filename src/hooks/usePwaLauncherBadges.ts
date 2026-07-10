@@ -9,12 +9,19 @@ import {
 } from "@/lib/firestore";
 import type { PermissionModule } from "@/lib/types";
 import { LOW_STOCK_THRESHOLD } from "@/lib/types";
+import { useAuth } from "@/context/AuthContext";
+import {
+  filterInquiriesForTeamScope,
+  filterInvoicesForTeamScope,
+  filterOrdersForTeamScope,
+} from "@/lib/team-data-scope";
 
 export type PwaLauncherBadgeMap = Record<string, number>;
 
 export function usePwaLauncherBadges(
   canRead: (module: PermissionModule) => boolean
 ) {
+  const { user } = useAuth();
   const [badges, setBadges] = useState<PwaLauncherBadgeMap>({});
 
   useEffect(() => {
@@ -27,7 +34,8 @@ export function usePwaLauncherBadges(
       if (canRead("orders")) {
         tasks.push(
           getOrders().then((orders) => {
-            const open = orders.filter((order) =>
+            const scoped = filterOrdersForTeamScope(orders, user);
+            const open = scoped.filter((order) =>
               ["pending", "confirmed", "processing"].includes(order.status)
             ).length;
             next["/admin/bestellungen"] = open;
@@ -39,7 +47,8 @@ export function usePwaLauncherBadges(
       if (canRead("contactInquiries")) {
         tasks.push(
           getContactInquiries().then((inquiries) => {
-            next["/admin/kontaktanfragen"] = inquiries.filter(
+            const scoped = filterInquiriesForTeamScope(inquiries, user);
+            next["/admin/kontaktanfragen"] = scoped.filter(
               (inquiry) => inquiry.status === "new"
             ).length;
           })
@@ -48,8 +57,9 @@ export function usePwaLauncherBadges(
 
       if (canRead("invoices")) {
         tasks.push(
-          getInvoices().then((invoices) => {
-            const open = invoices.filter((invoice) => invoice.status === "sent");
+          Promise.all([getInvoices(), getOrders()]).then(([invoices, orders]) => {
+            const scoped = filterInvoicesForTeamScope(invoices, orders, user);
+            const open = scoped.filter((invoice) => invoice.status === "sent");
             next["/admin/rechnungen"] = open.length;
 
             if (canRead("dunning")) {
@@ -98,7 +108,7 @@ export function usePwaLauncherBadges(
     return () => {
       cancelled = true;
     };
-  }, [canRead]);
+  }, [canRead, user]);
 
   return badges;
 }

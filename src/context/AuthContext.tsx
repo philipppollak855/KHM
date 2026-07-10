@@ -56,6 +56,8 @@ function mapUserDoc(id: string, email: string, data: Record<string, unknown>): U
     phone: data.phone as string | undefined,
     address: data.address as User["address"],
     permissions: parsePermissionsFromFirestore(data.permissions),
+    teamFullAccess: data.teamFullAccess === true,
+    teamDataScope: data.teamDataScope === "own" ? "own" : "all",
     active: data.active !== false,
     createdAt:
       (data.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),

@@ -33,9 +33,17 @@ export interface User {
   phone?: string;
   address?: Address;
   permissions?: TeamPermissions;
+  /** Team: alle Module außer Team-Verwaltung */
+  teamFullAccess?: boolean;
+  /** Team: nur eigene oder alle Team-Daten */
+  teamDataScope?: TeamDataScope;
+  createdByAdmin?: string;
+  createdByAdminName?: string;
   active?: boolean;
   createdAt: Date;
 }
+
+export type TeamDataScope = "own" | "all";
 
 export interface Address {
   street: string;
@@ -297,6 +305,8 @@ export interface ContactInquiry {
   subject: string;
   message: string;
   status: ContactInquiryStatus;
+  assignedToAdmin?: string;
+  assignedToAdminName?: string;
   createdAt: Date;
 }
 

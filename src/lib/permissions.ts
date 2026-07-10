@@ -1,4 +1,4 @@
-import type { ModulePermission, PermissionModule, TeamPermissions, User } from "@/lib/types";
+import type { ModulePermission, PermissionModule, TeamDataScope, TeamPermissions, User } from "@/lib/types";
 
 export const PERMISSION_MODULE_DEFS: {
   id: PermissionModule;
@@ -54,25 +54,49 @@ export function canAccessAdminArea(user: Pick<User, "role"> | null | undefined) 
   return isOwnerUser(user) || isTeamUser(user);
 }
 
+export function createFullPermissions(): TeamPermissions {
+  const base = createEmptyPermissions();
+  for (const key of Object.keys(base) as Array<Exclude<PermissionModule, "team">>) {
+    base[key] = { read: true, write: true };
+  }
+  return base;
+}
+
+export function hasTeamFullAccess(
+  user: Pick<User, "role" | "teamFullAccess"> | null | undefined
+) {
+  return isTeamUser(user) && user?.teamFullAccess === true;
+}
+
+export function resolveTeamDataScope(
+  user: Pick<User, "role" | "teamDataScope"> | null | undefined
+): TeamDataScope {
+  if (!user || isOwnerUser(user)) return "all";
+  if (!isTeamUser(user)) return "all";
+  return user.teamDataScope === "own" ? "own" : "all";
+}
+
 export function canReadModule(
-  user: Pick<User, "role" | "permissions"> | null | undefined,
+  user: Pick<User, "role" | "permissions" | "teamFullAccess"> | null | undefined,
   module: PermissionModule
 ) {
   if (!user) return false;
   if (isOwnerUser(user)) return true;
   if (!isTeamUser(user)) return false;
   if (module === "team") return false;
+  if (hasTeamFullAccess(user)) return true;
   return user.permissions?.[module]?.read === true;
 }
 
 export function canWriteModule(
-  user: Pick<User, "role" | "permissions"> | null | undefined,
+  user: Pick<User, "role" | "permissions" | "teamFullAccess"> | null | undefined,
   module: PermissionModule
 ) {
   if (!user) return false;
   if (isOwnerUser(user)) return true;
   if (!isTeamUser(user)) return false;
   if (module === "team") return false;
+  if (hasTeamFullAccess(user)) return true;
   return user.permissions?.[module]?.write === true;
 }
 

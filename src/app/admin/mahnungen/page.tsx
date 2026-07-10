@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getInvoices, formatPrice, formatDate } from "@/lib/firestore";
+import { getInvoices, getOrders, formatPrice, formatDate } from "@/lib/firestore";
 import { sendInvoiceReminder } from "@/lib/admin-api";
 import { getInvoiceListHref } from "@/lib/admin-invoice-filters";
+import { useTeamDataFilters } from "@/hooks/useTeamDataFilters";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import type { Invoice } from "@/lib/types";
 
 const reminderLabels = ["Keine", "Zahlungserinnerung", "1. Mahnung", "2. Mahnung"];
 
 export default function AdminDunningPage() {
+  const { filterInvoices } = useTeamDataFilters();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
@@ -18,9 +20,9 @@ export default function AdminDunningPage() {
   const [messageIsError, setMessageIsError] = useState(false);
 
   const load = async () => {
-    const all = await getInvoices();
+    const [all, orderList] = await Promise.all([getInvoices(), getOrders()]);
     setInvoices(
-      all
+      filterInvoices(all, orderList)
         .filter((i) => i.status === "sent")
         .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())
     );

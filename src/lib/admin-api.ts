@@ -1,5 +1,5 @@
 import { auth } from "./firebase";
-import type { PermissionModule, TeamPermissions } from "./types";
+import type { PermissionModule, TeamDataScope, TeamPermissions } from "./types";
 
 async function authHeaders() {
   const token = await auth.currentUser?.getIdToken();
@@ -13,6 +13,8 @@ export interface TeamMemberPayload {
   displayName: string;
   role: string;
   permissions?: TeamPermissions;
+  teamFullAccess?: boolean;
+  teamDataScope?: TeamDataScope;
   active: boolean;
   createdAt?: string | null;
 }
@@ -30,6 +32,8 @@ export async function createTeamMember(data: {
   displayName: string;
   password: string;
   permissions: TeamPermissions;
+  teamFullAccess?: boolean;
+  teamDataScope?: TeamDataScope;
 }) {
   const headers = await authHeaders();
   const res = await fetch("/api/admin/team", {
@@ -47,6 +51,8 @@ export async function updateTeamMember(data: {
   displayName?: string;
   password?: string;
   permissions?: TeamPermissions;
+  teamFullAccess?: boolean;
+  teamDataScope?: TeamDataScope;
   active?: boolean;
 }) {
   const headers = await authHeaders();
