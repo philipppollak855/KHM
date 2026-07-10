@@ -77,7 +77,7 @@ export default function AdminSettingsPage() {
         <section className="space-y-4">
           <h2 className="font-display text-lg text-wood-dark">PWA Startbildschirm</h2>
           <p className="text-sm text-stone leading-relaxed">
-            Erscheinungsbild des Admin-Startbildschirms auf diesem Gerät. Bei
+            Erscheinungsbild des Admin-Startbildschirms und der Kassa auf diesem Gerät. Bei
             „System" wird die Geräte-Einstellung verwendet — in installierten
             Apps funktioniert das nicht immer zuverlässig.
           </p>

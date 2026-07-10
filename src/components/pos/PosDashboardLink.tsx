@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LayoutDashboard, LayoutGrid } from "lucide-react";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import { getAdminHomePath } from "@/lib/auth-redirect";
+import { usePosTheme } from "@/hooks/usePosTheme";
 
 export default function PosDashboardLink({
   compact = false,
@@ -13,6 +14,7 @@ export default function PosDashboardLink({
   className?: string;
 }) {
   const isPwa = useIsStandalonePwa();
+  const { t } = usePosTheme();
   const href = getAdminHomePath({ pwa: isPwa });
   const label = isPwa ? "Start" : "Dashboard";
   const Icon = isPwa ? LayoutGrid : LayoutDashboard;
@@ -20,7 +22,7 @@ export default function PosDashboardLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg border border-linen/20 text-linen/90 hover:bg-linen/10 transition-colors ${
+      className={`inline-flex items-center justify-center gap-2 rounded-lg border transition-colors ${t.dashboardLink} ${
         compact ? "p-2.5" : "px-3 py-2 text-sm"
       } ${className}`}
       aria-label={isPwa ? "Zum Startbildschirm" : "Zum Dashboard"}

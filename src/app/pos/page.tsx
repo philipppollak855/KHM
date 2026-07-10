@@ -1,10 +1,14 @@
+"use client";
+
 import { Suspense } from "react";
 import PosApp from "@/components/pos/PosApp";
+import { usePosTheme } from "@/hooks/usePosTheme";
 
 function PosLoading() {
+  const { t } = usePosTheme();
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-wood-dark text-linen">
-      <p className="text-linen/70">Kassa wird geladen…</p>
+    <div className={`min-h-dvh flex items-center justify-center ${t.shell}`}>
+      <p className={t.textMuted}>Kassa wird geladen…</p>
     </div>
   );
 }

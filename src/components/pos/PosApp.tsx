@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import PosDashboardLink from "@/components/pos/PosDashboardLink";
 import PosQrPayment from "@/components/pos/PosQrPayment";
+import PosThemeToggle from "@/components/pos/PosThemeToggle";
 import { usePosUrlNavigation } from "@/hooks/usePosUrlNavigation";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
+import { usePosTheme } from "@/hooks/usePosTheme";
 import { useAuth } from "@/context/AuthContext";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
 import CompanyLogo from "@/components/branding/CompanyLogo";
@@ -63,6 +65,7 @@ export default function PosApp() {
   const { view, cartOpen, customerOpen, setView, setCartOpen, setCustomerOpen } =
     usePosUrlNavigation();
   const isPwa = useIsStandalonePwa();
+  const { t, isDark } = usePosTheme();
   const { user } = useAuth();
   const { company } = useCompanyBranding();
   const sellerName = user?.displayName?.trim() || user?.email || "Team";
@@ -427,24 +430,24 @@ export default function PosApp() {
     const isPending = saleResult.paymentStatus === "pending";
     const isCard = saleResult.paymentMethod === "card";
     return (
-      <div className="min-h-dvh flex flex-col p-6 pb-pwa-nav bg-gradient-to-b from-forest to-wood-dark">
+      <div className={`${t.page} p-6 pb-pwa-nav ${t.successBg}`}>
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <CheckCircle2 className="w-16 h-16 text-wheat mb-4" strokeWidth={1.5} />
           <h1 className="font-display text-3xl font-light mb-2">
             {isPending ? "Verkauf verbucht" : "Verkauf abgeschlossen"}
           </h1>
-          <p className="text-linen/70 mb-1">{saleResult.orderNumber}</p>
+          <p className={`${t.textMuted} mb-1`}>{saleResult.orderNumber}</p>
           <p className="text-2xl font-display text-wheat mb-4">
             {formatPrice(saleResult.total)}
           </p>
           {isPending && (
-            <p className="text-sm text-linen/70 mb-8 max-w-sm">
+            <p className={`text-sm ${t.textMuted} mb-8 max-w-sm`}>
               Rechnung auf Kundenkonto – Zahlung per Überweisung offen.
               Bestätigung erfolgt nach Zahlungseingang im Admin.
             </p>
           )}
           {tempPassword && (
-            <p className="text-sm text-wheat/90 mb-4 p-3 bg-black/20 rounded max-w-sm">
+            <p className={`text-sm text-wheat/90 mb-4 p-3 rounded max-w-sm ${isDark ? "bg-black/20" : "bg-wood/5"}`}>
               Kundenkonto erstellt. Temporäres Passwort: <strong>{tempPassword}</strong>
             </p>
           )}
@@ -457,19 +460,21 @@ export default function PosApp() {
               {isCard ? "Kartenbeleg drucken" : "Rechnung drucken"}
             </button>
             {printStatus && (
-              <p className="text-sm text-linen/70">{printStatus}</p>
+              <p className={`text-sm ${t.textMuted}`}>{printStatus}</p>
             )}
             {customer.email && (
               <button
                 onClick={handleEmail}
-                className="flex items-center justify-center gap-2 w-full py-3.5 border border-linen/30 text-linen"
+                className={`flex items-center justify-center gap-2 w-full py-3.5 border font-medium ${
+                  isDark ? "border-linen/30 text-linen" : "border-wood/20 text-wood-dark"
+                }`}
               >
                 <Mail className="w-5 h-5" />
                 Per E-Mail senden
               </button>
             )}
             {emailStatus && (
-              <p className="text-sm text-linen/70">{emailStatus}</p>
+              <p className={`text-sm ${t.textMuted}`}>{emailStatus}</p>
             )}
             <button
               onClick={resetSale}
@@ -488,28 +493,29 @@ export default function PosApp() {
 
   if (view === "card_pending") {
     return (
-      <div className="min-h-dvh flex flex-col pb-pwa-nav bg-linen text-wood-dark">
-        <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
+      <div className={`${t.page} pb-pwa-nav`}>
+        <header className={`flex items-center gap-3 p-4 border-b ${t.header}`}>
           <button onClick={() => setView("checkout")} className="p-2" aria-label="Zurück">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="font-display text-xl font-light flex-1 min-w-0">Kartenzahlung (SumUp)</h1>
+          <PosThemeToggle compact />
           {!isPwa && <PosDashboardLink compact />}
         </header>
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <CreditCard className="w-16 h-16 text-forest mb-6" strokeWidth={1.5} />
           <p className="text-3xl font-display text-forest mb-2">{formatPrice(totals.total)}</p>
-          <p className="text-stone mb-2 max-w-sm">
+          <p className={`${t.textMuted} mb-2 max-w-sm`}>
             Bitte den Betrag am SumUp-Terminal durchführen. Danach Zahlung bestätigen.
           </p>
-          <p className="text-xs text-stone/80 mb-8">Verkäufer: {sellerName}</p>
+          <p className={`text-xs ${t.textMuted} mb-8`}>Verkäufer: {sellerName}</p>
           <input
             placeholder="SumUp-Referenz (optional)"
             value={cardReference}
             onChange={(e) => setCardReference(e.target.value)}
-            className="w-full max-w-sm border border-wood/20 rounded-lg px-4 py-3 text-sm mb-4"
+            className={`w-full max-w-sm rounded-lg px-4 py-3 text-sm mb-4 ${t.input}`}
           />
-          {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+          {error && <p className={`${t.error} text-sm mb-4`}>{error}</p>}
           <button
             onClick={handleCardConfirm}
             disabled={processing}
@@ -524,19 +530,20 @@ export default function PosApp() {
 
   if (view === "qr_pending") {
     return (
-      <div className="min-h-dvh flex flex-col pb-pwa-nav bg-linen text-wood-dark">
-        <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
+      <div className={`${t.page} pb-pwa-nav`}>
+        <header className={`flex items-center gap-3 p-4 border-b ${t.header}`}>
           <button onClick={() => setView("checkout")} className="p-2" aria-label="Zurück">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-xl font-light">QR-Code</h1>
-            <p className="text-xs text-linen/60 truncate">Verkäufer: {sellerName}</p>
+            <p className={`text-xs ${t.headerMeta} truncate`}>Verkäufer: {sellerName}</p>
           </div>
+          <PosThemeToggle compact />
           {!isPwa && <PosDashboardLink compact />}
         </header>
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col items-center">
-          <p className="text-center text-stone mb-6 max-w-md">
+          <p className={`text-center ${t.textMuted} mb-6 max-w-md`}>
             QR-Code dem Kunden zeigen. Die Banking-App füllt Betrag und Verwendungszweck automatisch aus.
             Erst nach Zahlungseingang bestätigen.
           </p>
@@ -548,7 +555,7 @@ export default function PosApp() {
             bankName={company.bankName}
             reference={qrTransferReference}
           />
-          {error && <p className="text-red-600 text-sm mt-4">{error}</p>}
+          {error && <p className={`${t.error} text-sm mt-4`}>{error}</p>}
           <button
             onClick={handleQrConfirm}
             disabled={processing || !qrTransferReference}
@@ -563,21 +570,22 @@ export default function PosApp() {
 
   if (view === "checkout") {
     return (
-      <div className="min-h-dvh flex flex-col pb-pwa-nav bg-linen text-wood-dark">
-        <header className="flex items-center gap-3 p-4 border-b border-wood/10 bg-wood-dark text-linen">
+      <div className={`${t.page} pb-pwa-nav`}>
+        <header className={`flex items-center gap-3 p-4 border-b ${t.header}`}>
           <button onClick={() => setView("catalog")} className="p-2" aria-label="Zurück">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="font-display text-xl font-light flex-1 min-w-0">Kasse</h1>
-          <p className="hidden sm:block text-xs text-linen/60 truncate max-w-[8rem]">{sellerName}</p>
+          <p className={`hidden sm:block text-xs ${t.headerMeta} truncate max-w-[8rem]`}>{sellerName}</p>
+          <PosThemeToggle compact />
           {!isPwa && <PosDashboardLink compact />}
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          <section className="bg-white border border-wood/10 p-4">
-            <p className="text-xs uppercase tracking-wider text-stone mb-2">Kunde</p>
+          <section className={`${t.sectionCard} p-4`}>
+            <p className={`text-xs uppercase tracking-wider ${t.textMuted} mb-2`}>Kunde</p>
             <p className="font-medium">{getPosCustomerLabel(customer)}</p>
-            {customer.email && <p className="text-sm text-stone">{customer.email}</p>}
+            {customer.email && <p className={`text-sm ${t.textMuted}`}>{customer.email}</p>}
             {customer.isWalkIn && (
               <label className="flex items-center gap-2 mt-3 text-sm">
                 <input
@@ -594,33 +602,33 @@ export default function PosApp() {
                   placeholder="Name *"
                   value={newCustomer.name}
                   onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                  className="w-full border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                  className={`w-full rounded-lg px-3 py-2 text-sm ${t.input}`}
                 />
                 <input
                   placeholder="E-Mail (optional)"
                   type="email"
                   value={newCustomer.email}
                   onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                  className="w-full border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                  className={`w-full rounded-lg px-3 py-2 text-sm ${t.input}`}
                 />
                 <input
                   placeholder="Straße (optional)"
                   value={newCustomer.street}
                   onChange={(e) => setNewCustomer({ ...newCustomer, street: e.target.value })}
-                  className="w-full border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                  className={`w-full rounded-lg px-3 py-2 text-sm ${t.input}`}
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     placeholder="PLZ"
                     value={newCustomer.zip}
                     onChange={(e) => setNewCustomer({ ...newCustomer, zip: e.target.value })}
-                    className="border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                    className={`rounded-lg px-3 py-2 text-sm ${t.input}`}
                   />
                   <input
                     placeholder="Ort"
                     value={newCustomer.city}
                     onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
-                    className="border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                    className={`rounded-lg px-3 py-2 text-sm ${t.input}`}
                   />
                 </div>
                 {newCustomer.email && (
@@ -640,7 +648,7 @@ export default function PosApp() {
           </section>
 
           <section>
-            <p className="text-xs uppercase tracking-wider text-stone mb-3">Zahlungsart</p>
+            <p className={`text-xs uppercase tracking-wider ${t.textMuted} mb-3`}>Zahlungsart</p>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: "cash" as const, label: "Bar", icon: Banknote },
@@ -659,7 +667,7 @@ export default function PosApp() {
                     className={`flex flex-col items-center gap-2 p-3 border-2 transition-colors ${
                       paymentMethod === id
                         ? "border-forest bg-forest/5"
-                        : "border-wood/15 bg-white"
+                        : `border-wood/15 ${isDark ? "bg-linen" : "bg-white"}`
                     } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
                     <Icon className="w-5 h-5 text-forest" />
@@ -669,18 +677,18 @@ export default function PosApp() {
               })}
             </div>
             {paymentMethod === "bank_transfer" && (
-              <p className="text-xs text-stone mt-2">
+              <p className={`text-xs ${t.textMuted} mt-2`}>
                 Rechnung wird dem Kundenkonto gutgeschrieben. Zahlung manuell bestätigen.
               </p>
             )}
             {paymentMethod === "qr_transfer" && (
-              <p className="text-xs text-stone mt-2">
+              <p className={`text-xs ${t.textMuted} mt-2`}>
                 SEPA-QR auf dem Display – Kunde überweist per App, Verkäufer bestätigt den Eingang.
               </p>
             )}
           </section>
 
-          <section className="bg-white border border-wood/10 p-4 space-y-2">
+          <section className={`${t.sectionCard} p-4 space-y-2`}>
             {cart.map((item) => {
               const lineKey = getPosLineKey(item);
               const label = item.variantName
@@ -692,17 +700,17 @@ export default function PosApp() {
                 <span>{formatPrice(item.price * item.quantity)}</span>
               </div>
             )})}
-            <div className="border-t border-wood/10 pt-2 flex justify-between font-semibold text-lg">
+            <div className={`border-t ${t.panelBorder} pt-2 flex justify-between font-semibold text-lg`}>
               <span>Gesamt</span>
               <span className="text-forest">{formatPrice(totals.total)}</span>
             </div>
-            <p className="text-xs text-stone">inkl. USt.</p>
+            <p className={`text-xs ${t.textMuted}`}>inkl. USt.</p>
           </section>
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && <p className={`${t.error} text-sm`}>{error}</p>}
         </div>
 
-        <div className="p-4 border-t border-wood/10 bg-white">
+        <div className={`p-4 ${t.footerBar}`}>
           <button
             onClick={handleCheckout}
             disabled={processing || cart.length === 0}
@@ -716,24 +724,25 @@ export default function PosApp() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
-      <header className="sticky top-0 z-30 bg-wood-dark/95 backdrop-blur border-b border-linen/10 px-4 py-3">
+    <div className={`${t.page} flex flex-col`}>
+      <header className={`sticky top-0 z-30 backdrop-blur px-4 py-3 ${t.header}`}>
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="min-w-0 flex-1 flex items-center gap-3">
-            <CompanyLogo variant="mark" size="sm" dark />
+            <CompanyLogo variant="mark" size="sm" dark={t.logoDark} />
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-linen/50">Kassa</p>
+              <p className={`text-[10px] uppercase tracking-[0.2em] ${t.headerSub}`}>Kassa</p>
             <button
               onClick={() => setCustomerOpen(true)}
-              className="flex items-center gap-2 text-linen text-sm mt-0.5 max-w-full"
+              className={`flex items-center gap-2 text-sm mt-0.5 max-w-full ${t.text}`}
             >
               <User className="w-4 h-4 text-wheat shrink-0" />
               <span className="truncate">{getPosCustomerLabel(customer)}</span>
             </button>
-            <p className="text-[10px] text-linen/45 truncate mt-0.5">Verkäufer: {sellerName}</p>
+            <p className={`text-[10px] ${t.headerMeta} truncate mt-0.5`}>Verkäufer: {sellerName}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <PosThemeToggle compact />
             {!isPwa && <PosDashboardLink compact />}
             <button
               onClick={() => setCartOpen(true)}
@@ -751,12 +760,12 @@ export default function PosApp() {
         </div>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-linen/40" />
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${t.searchIcon}`} />
           <input
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
             placeholder="Produkt suchen…"
-            className="w-full bg-linen/10 border border-linen/15 rounded-lg pl-10 pr-4 py-2.5 text-sm text-linen placeholder:text-linen/40"
+            className={`w-full rounded-lg pl-10 pr-4 py-2.5 text-sm ${t.searchInput}`}
           />
         </div>
       </header>
@@ -765,9 +774,7 @@ export default function PosApp() {
         <button
           onClick={() => setCategoryId("all")}
           className={`shrink-0 px-4 py-2 text-sm rounded-full border ${
-            categoryId === "all"
-              ? "bg-wheat text-wood-dark border-wheat"
-              : "border-linen/20 text-linen/80"
+            categoryId === "all" ? t.chipActive : t.chip
           }`}
         >
           Alle
@@ -777,9 +784,7 @@ export default function PosApp() {
             key={c.id}
             onClick={() => setCategoryId(c.id)}
             className={`shrink-0 px-4 py-2 text-sm rounded-full border ${
-              categoryId === c.id
-                ? "bg-wheat text-wood-dark border-wheat"
-                : "border-linen/20 text-linen/80"
+              categoryId === c.id ? t.chipActive : t.chip
             }`}
           >
             {c.name}
@@ -789,12 +794,12 @@ export default function PosApp() {
 
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {catalogLoading ? (
-          <div className="flex items-center justify-center py-20 text-linen/60 text-sm">
+          <div className={`flex items-center justify-center py-20 text-sm ${t.loading}`}>
             Produkte werden geladen…
           </div>
         ) : catalogError ? (
           <div className="text-center py-20 px-4">
-            <p className="text-red-300 text-sm mb-4">{catalogError}</p>
+            <p className={`${t.error} text-sm mb-4`}>{catalogError}</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-forest text-linen text-sm"
@@ -812,7 +817,7 @@ export default function PosApp() {
               key={p.id}
               onClick={() => addToCart(p)}
               disabled={stock <= 0}
-              className="text-left bg-linen text-wood-dark overflow-hidden border border-wood/10 disabled:opacity-40 active:scale-[0.98] transition-transform"
+              className={`text-left overflow-hidden disabled:opacity-40 active:scale-[0.98] transition-transform ${t.productCard}`}
             >
               <div className="relative aspect-square bg-wood/5">
                 {p.imageUrl ? (
@@ -848,7 +853,7 @@ export default function PosApp() {
           )})}
         </div>
         {filteredProducts.length === 0 && (
-          <p className="text-center text-linen/50 py-12">Keine Produkte gefunden.</p>
+          <p className={`text-center py-12 ${t.empty}`}>Keine Produkte gefunden.</p>
         )}
         </>
         )}
@@ -856,9 +861,9 @@ export default function PosApp() {
 
       {cartOpen && (
         <div className="fixed inset-0 z-[55] flex flex-col justify-end">
-          <div className="absolute inset-0 bg-wood-dark/60" onClick={() => setCartOpen(false)} />
-          <div className="relative bg-linen text-wood-dark rounded-t-2xl max-h-[80vh] flex flex-col mb-pwa-nav">
-            <div className="flex items-center justify-between p-4 border-b border-wood/10">
+          <div className={`absolute inset-0 ${t.overlay}`} onClick={() => setCartOpen(false)} />
+          <div className={`relative rounded-t-2xl max-h-[80vh] flex flex-col mb-pwa-nav ${t.panel}`}>
+            <div className={`flex items-center justify-between p-4 border-b ${t.panelBorder}`}>
               <h2 className="font-display text-xl">Warenkorb</h2>
               <button onClick={() => setCartOpen(false)}>
                 <X className="w-5 h-5" />
@@ -866,7 +871,7 @@ export default function PosApp() {
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {cart.length === 0 && (
-                <p className="text-center text-stone py-8">Warenkorb ist leer.</p>
+                <p className={`text-center py-8 ${t.textMuted}`}>Warenkorb ist leer.</p>
               )}
               {cart.map((item) => {
                 const lineKey = getPosLineKey(item);
@@ -905,7 +910,7 @@ export default function PosApp() {
                 </div>
               )})}
             </div>
-            <div className="p-4 border-t border-wood/10 space-y-3">
+            <div className={`p-4 border-t space-y-3 ${t.panelBorder}`}>
               <div className="flex justify-between text-lg font-semibold">
                 <span>Gesamt</span>
                 <span className="text-forest">{formatPrice(totals.total)}</span>
@@ -927,9 +932,9 @@ export default function PosApp() {
 
       {customerOpen && (
         <div className="fixed inset-0 z-[55] flex items-end sm:items-center justify-center p-4">
-          <div className="absolute inset-0 bg-wood-dark/70" onClick={() => setCustomerOpen(false)} />
-          <div className="relative w-full max-w-md bg-linen text-wood-dark rounded-2xl max-h-[85vh] overflow-y-auto mb-pwa-nav sm:mb-0">
-            <div className="flex items-center justify-between p-4 border-b border-wood/10">
+          <div className={`absolute inset-0 ${t.overlayStrong}`} onClick={() => setCustomerOpen(false)} />
+          <div className={`relative w-full max-w-md rounded-2xl max-h-[85vh] overflow-y-auto mb-pwa-nav sm:mb-0 ${t.panel}`}>
+            <div className={`flex items-center justify-between p-4 border-b ${t.panelBorder}`}>
               <h2 className="font-display text-xl">Kunde</h2>
               <button onClick={() => setCustomerOpen(false)}>
                 <X className="w-5 h-5" />
@@ -944,7 +949,7 @@ export default function PosApp() {
                 className="w-full py-3 border-2 border-wood/15 text-left px-4"
               >
                 <p className="font-medium">{POS_WALK_IN_UI_LABEL}</p>
-                <p className="text-xs text-stone">Ohne Kundenkonto</p>
+                <p className={`text-xs ${t.textMuted}`}>Ohne Kundenkonto</p>
               </button>
 
               <div>
@@ -952,7 +957,7 @@ export default function PosApp() {
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                   placeholder="Bestehenden Kunden suchen…"
-                  className="w-full border border-wood/20 rounded-lg px-3 py-2.5 text-sm"
+                  className={`w-full rounded-lg px-3 py-2.5 text-sm ${t.input}`}
                 />
                 <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
                   {customerResults.map((c) => (
@@ -971,46 +976,46 @@ export default function PosApp() {
                       className="w-full text-left px-3 py-2 hover:bg-wood/5 rounded-lg"
                     >
                       <p className="font-medium text-sm">{c.name}</p>
-                      <p className="text-xs text-stone">{c.email}</p>
+                      <p className={`text-xs ${t.textMuted}`}>{c.email}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="border-t border-wood/10 pt-4">
-                <p className="text-xs uppercase tracking-wider text-stone mb-3">Neuer Kunde</p>
+              <div className={`border-t pt-4 ${t.panelBorder}`}>
+                <p className={`text-xs uppercase tracking-wider ${t.textMuted} mb-3`}>Neuer Kunde</p>
                 <div className="space-y-2">
                   <input
                     placeholder="Name *"
                     value={newCustomer.name}
                     onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                    className="w-full border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                    className={`w-full rounded-lg px-3 py-2 text-sm ${t.input}`}
                   />
                   <input
                     placeholder="E-Mail (optional)"
                     type="email"
                     value={newCustomer.email}
                     onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
-                    className="w-full border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                    className={`w-full rounded-lg px-3 py-2 text-sm ${t.input}`}
                   />
                   <input
                     placeholder="Straße (optional)"
                     value={newCustomer.street}
                     onChange={(e) => setNewCustomer({ ...newCustomer, street: e.target.value })}
-                    className="w-full border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                    className={`w-full rounded-lg px-3 py-2 text-sm ${t.input}`}
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       placeholder="PLZ"
                       value={newCustomer.zip}
                       onChange={(e) => setNewCustomer({ ...newCustomer, zip: e.target.value })}
-                      className="border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                      className={`rounded-lg px-3 py-2 text-sm ${t.input}`}
                     />
                     <input
                       placeholder="Ort"
                       value={newCustomer.city}
                       onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })}
-                      className="border border-wood/20 rounded-lg px-3 py-2 text-sm"
+                      className={`rounded-lg px-3 py-2 text-sm ${t.input}`}
                     />
                   </div>
                   {newCustomer.email && (
@@ -1034,7 +1039,7 @@ export default function PosApp() {
                   </button>
                 </div>
               </div>
-              {error && <p className="text-red-600 text-sm">{error}</p>}
+              {error && <p className={`${t.error} text-sm`}>{error}</p>}
             </div>
           </div>
         </div>
@@ -1043,17 +1048,17 @@ export default function PosApp() {
       {variantPickerProduct && (
         <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-wood-dark/70"
+            className={`absolute inset-0 ${t.overlayStrong}`}
             onClick={() => setVariantPickerProduct(null)}
           />
-          <div className="relative w-full max-w-md bg-linen text-wood-dark rounded-2xl p-5 space-y-4 mb-pwa-nav sm:mb-0">
+          <div className={`relative w-full max-w-md rounded-2xl p-5 space-y-4 mb-pwa-nav sm:mb-0 ${t.panel}`}>
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-display text-xl">Variante wählen</h2>
               <button onClick={() => setVariantPickerProduct(null)}>
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-stone">{variantPickerProduct.name}</p>
+            <p className={`text-sm ${t.textMuted}`}>{variantPickerProduct.name}</p>
             <div className="space-y-2">
               {getActiveVariants(variantPickerProduct).map((variant) => (
                 <button

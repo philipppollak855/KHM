@@ -6,10 +6,12 @@ import { useAuth } from "@/context/AuthContext";
 import PwaRootGuard from "@/components/pwa/PwaRootGuard";
 import PwaBottomNav from "@/components/pwa/PwaBottomNav";
 import { usePwaBottomNavInset } from "@/hooks/usePwaBottomNavInset";
+import { usePosTheme } from "@/hooks/usePosTheme";
 
 export default function PosLayoutGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, canAccessAdmin, canRead, loading } = useAuth();
+  const { isDark, t } = usePosTheme();
 
   usePwaBottomNavInset(!loading && canAccessAdmin && canRead("pos"));
 
@@ -25,8 +27,11 @@ export default function PosLayoutGuard({ children }: { children: React.ReactNode
 
   if (loading || !user || !canAccessAdmin || !canRead("pos")) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-wood-dark text-linen">
-        <p className="text-linen/70">Kassa wird geladen…</p>
+      <div
+        data-theme={isDark ? "dark" : "light"}
+        className={`min-h-dvh flex items-center justify-center pwa-pos-shell ${t.shell}`}
+      >
+        <p className={t.textMuted}>Kassa wird geladen…</p>
       </div>
     );
   }
@@ -34,7 +39,10 @@ export default function PosLayoutGuard({ children }: { children: React.ReactNode
   return (
     <>
       <PwaRootGuard />
-      <div className="min-h-dvh bg-wood-dark text-linen pwa-pos-shell pb-pwa-nav lg:pb-0">
+      <div
+        data-theme={isDark ? "dark" : "light"}
+        className={`min-h-dvh pwa-pos-shell pb-pwa-nav lg:pb-0 ${t.shell}`}
+      >
         {children}
       </div>
       <PwaBottomNav />
