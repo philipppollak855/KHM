@@ -3,10 +3,15 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { Upload, X, Loader2, RefreshCw, ImageIcon } from "lucide-react";
-import { uploadProductImage, uploadCategoryImage, uploadBrandingImage } from "@/lib/storage";
+import {
+  uploadProductImage,
+  uploadCategoryImage,
+  uploadBrandingImage,
+  uploadMarketingImage,
+} from "@/lib/storage";
 import ImageLibraryPicker from "@/components/admin/ImageLibraryPicker";
 
-type UploadFolder = "products" | "categories" | "branding";
+type UploadFolder = "products" | "categories" | "branding" | "marketing";
 
 interface ImageUploadProps {
   value?: string;
@@ -43,7 +48,9 @@ export default function ImageUpload({
           ? await uploadCategoryImage(file)
           : folder === "branding"
             ? await uploadBrandingImage(file)
-            : await uploadProductImage(file);
+            : folder === "marketing"
+              ? await uploadMarketingImage(file)
+              : await uploadProductImage(file);
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload fehlgeschlagen");

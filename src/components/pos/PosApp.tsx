@@ -10,6 +10,8 @@ import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import { usePosTheme } from "@/hooks/usePosTheme";
 import { useAuth } from "@/context/AuthContext";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
+import { useSiteContent } from "@/context/SiteContentContext";
+import Link from "next/link";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 import {
   ShoppingCart,
@@ -68,6 +70,7 @@ export default function PosApp() {
   const { t, isDark } = usePosTheme();
   const { user } = useAuth();
   const { company } = useCompanyBranding();
+  const { content } = useSiteContent();
   const sellerName = user?.displayName?.trim() || user?.email || "Team";
   const prevViewRef = useRef(view);
   const [products, setProducts] = useState<Product[]>([]);
@@ -768,6 +771,12 @@ export default function PosApp() {
             className={`w-full rounded-lg pl-10 pr-4 py-2.5 text-sm ${t.searchInput}`}
           />
         </div>
+        <p className={`text-[10px] ${t.headerMeta} mt-2 leading-relaxed`}>
+          {content.legal.posNotice}{" "}
+          <Link href="/agb-kassa" target="_blank" className="underline hover:opacity-80">
+            AGB Kassa
+          </Link>
+        </p>
       </header>
 
       <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">

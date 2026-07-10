@@ -5,10 +5,14 @@ import { usePathname } from "next/navigation";
 import { Mail, MapPin, Phone } from "lucide-react";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
+import { useSiteContent } from "@/context/SiteContentContext";
+import CookieSettingsButton from "@/components/legal/CookieSettingsButton";
 
 export default function Footer({ className }: { className?: string }) {
   const pathname = usePathname();
   const { company } = useCompanyBranding();
+  const { content } = useSiteContent();
+  const { navigation } = content;
   if (pathname.startsWith("/admin")) return null;
 
   return (
@@ -16,7 +20,7 @@ export default function Footer({ className }: { className?: string }) {
       <div className="h-px bg-gradient-to-r from-transparent via-wheat/20 to-transparent" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
-          <div className="md:col-span-5">
+          <div className="md:col-span-4">
             <div className="mb-6">
               <CompanyLogo variant="full" size="md" dark />
             </div>
@@ -25,37 +29,47 @@ export default function Footer({ className }: { className?: string }) {
             </p>
           </div>
 
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <h3 className="text-[10px] tracking-[0.25em] uppercase text-wheat/70 mb-5">
-              Navigation
+              {navigation.footer.navigationTitle}
             </h3>
             <ul className="space-y-3 text-sm text-linen/50">
-              <li>
-                <Link href="/shop" className="hover:text-linen transition-colors">
-                  Kollektion
-                </Link>
-              </li>
-              <li>
-                <Link href="/ueber-uns" className="hover:text-linen transition-colors">
-                  Über uns
-                </Link>
-              </li>
-              <li>
-                <Link href="/kontakt" className="hover:text-linen transition-colors">
-                  Kontakt
-                </Link>
-              </li>
+              {navigation.links.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="hover:text-linen transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <Link href="/login" className="hover:text-linen transition-colors">
-                  Kundenbereich
+                  {navigation.footer.customerAreaLabel}
                 </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div className="md:col-span-2">
+            <h3 className="text-[10px] tracking-[0.25em] uppercase text-wheat/70 mb-5">
+              {content.legal.footer.sectionTitle}
+            </h3>
+            <ul className="space-y-3 text-sm text-linen/50">
+              {content.legal.footer.links.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="hover:text-linen transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <CookieSettingsButton />
               </li>
             </ul>
           </div>
 
           <div className="md:col-span-4">
             <h3 className="text-[10px] tracking-[0.25em] uppercase text-wheat/70 mb-5">
-              Kontakt
+              {navigation.footer.contactTitle}
             </h3>
             <ul className="space-y-4 text-sm text-linen/50">
               <li className="flex items-start gap-3">

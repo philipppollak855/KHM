@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import ProductCard from "@/components/shop/ProductCard";
 import type { Category, Product } from "@/lib/types";
 import { getActiveCategories, getActiveProducts } from "@/lib/firestore";
+import { useSiteContent } from "@/context/SiteContentContext";
 import PageHeader from "@/components/layout/PageHeader";
 
 export default function ShopPage() {
+  const { content } = useSiteContent();
+  const { shop } = content;
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -36,7 +39,11 @@ export default function ShopPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <PageHeader label="Kollektion" title="Unser Shop" description="Handgemachte Unikate aus dem Schneebergland — alle Preise inkl. USt." />
+      <PageHeader
+        label={shop.header.label}
+        title={shop.header.title}
+        description={shop.header.description}
+      />
 
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-10">
@@ -48,7 +55,7 @@ export default function ShopPage() {
                 : "bg-wood/10 text-wood-dark hover:bg-wood/20"
             }`}
           >
-            Alle
+            {shop.allCategoriesLabel}
           </button>
           {categories.map((cat) => (
             <button
@@ -83,13 +90,11 @@ export default function ShopPage() {
         </div>
       ) : (
         <div className="text-center py-20">
-          <span className="text-6xl mb-4 block">🌲</span>
+          <span className="text-6xl mb-4 block">{shop.emptyState.emoji}</span>
           <h2 className="font-display text-2xl font-semibold text-wood-dark mb-2">
-            Noch keine Produkte
+            {shop.emptyState.title}
           </h2>
-          <p className="text-wood/60">
-            Bald finden Sie hier unsere handgemachten Schätze.
-          </p>
+          <p className="text-wood/60">{shop.emptyState.text}</p>
         </div>
       )}
     </div>

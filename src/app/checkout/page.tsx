@@ -11,6 +11,7 @@ import { useOrderCalculation } from "@/hooks/useOrderCalculation";
 import { COUNTRIES } from "@/lib/shipping";
 import { saveGuestOrderConfirmation } from "@/lib/guest-order";
 import type { PaymentMethod } from "@/lib/types";
+import { useSiteContent } from "@/context/SiteContentContext";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Button from "@/components/ui/Button";
@@ -23,6 +24,10 @@ export default function CheckoutPage() {
   const { items, clearCart } = useCart();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [acceptedAgb, setAcceptedAgb] = useState(false);
+  const [acceptedWithdrawal, setAcceptedWithdrawal] = useState(false);
+  const { content } = useSiteContent();
+  const { checkout: checkoutLegal } = content.legal;
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("qr_transfer");
 
@@ -75,6 +80,10 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!acceptedAgb || !acceptedWithdrawal) {
+      setError(checkoutLegal.errorMessage);
+      return;
+    }
     setSubmitting(true);
     setError("");
 
@@ -294,6 +303,44 @@ export default function CheckoutPage() {
                 Nach der Bestellung wird ein QR-Code mit Betrag und Verwendungszweck angezeigt.
               </p>
             )}
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-wood/10 bg-linen/50 p-4 text-sm">
+            <label className="flex gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptedAgb}
+                onChange={(e) => setAcceptedAgb(e.target.checked)}
+                className="mt-1"
+                required
+              />
+              <span className="text-stone">
+                {checkoutLegal.agbLabel}{" "}
+                <Link href="/agb" className="text-forest hover:underline" target="_blank">
+                  AGB
+                </Link>
+                {" · "}
+                <Link href="/widerruf" className="text-forest hover:underline" target="_blank">
+                  Widerruf
+                </Link>
+              </span>
+            </label>
+            <label className="flex gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptedWithdrawal}
+                onChange={(e) => setAcceptedWithdrawal(e.target.checked)}
+                className="mt-1"
+                required
+              />
+              <span className="text-stone">{checkoutLegal.withdrawalLabel}</span>
+            </label>
+            <p className="text-xs text-stone">
+              {checkoutLegal.privacyNote}{" "}
+              <Link href="/datenschutz" className="text-forest hover:underline" target="_blank">
+                Datenschutzerklärung
+              </Link>
+            </p>
           </div>
 
           {error && <p className="text-red-600 text-sm">{error}</p>}

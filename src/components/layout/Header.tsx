@@ -8,8 +8,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import CompanyLogo from "@/components/branding/CompanyLogo";
+import { useSiteContent } from "@/context/SiteContentContext";
 
-const navLinks = [
+const FALLBACK_NAV = [
   { href: "/", label: "Start" },
   { href: "/shop", label: "Kollektion" },
   { href: "/ueber-uns", label: "Über uns" },
@@ -18,6 +19,10 @@ const navLinks = [
 
 export default function Header() {
   const pathname = usePathname();
+  const { content } = useSiteContent();
+  const navLinks = content.navigation.links.length > 0
+    ? content.navigation.links
+    : FALLBACK_NAV;
   const isHome = pathname === "/";
   const { user, canAccessAdmin, logout } = useAuth();
   const { totalItems } = useCart();
@@ -79,7 +84,7 @@ export default function Header() {
             <Link
               href="/warenkorb"
               className={`relative p-2.5 transition-colors ${iconBtnClass}`}
-              aria-label="Warenkorb"
+              aria-label={content.navigation.cartLabel}
             >
               <ShoppingCart className="w-4 h-4" strokeWidth={1.5} />
               {totalItems > 0 && (
@@ -106,8 +111,8 @@ export default function Header() {
                 className={`p-2.5 transition-colors ${iconBtnClass} ${
                   isPwa ? "inline-flex" : "hidden sm:inline-flex"
                 }`}
-                title="Abmelden"
-                aria-label="Abmelden"
+                title={content.navigation.logoutLabel}
+                aria-label={content.navigation.logoutLabel}
               >
                 <LogOut className="w-4 h-4" strokeWidth={1.5} />
               </button>
@@ -120,7 +125,7 @@ export default function Header() {
                     : "text-wood-dark hover:text-forest border border-wood/15 hover:border-wood/30"
                 }`}
               >
-                Anmelden
+                {content.navigation.loginLabel}
               </Link>
             )}
 
@@ -168,7 +173,7 @@ export default function Header() {
                   }}
                   className="block w-full text-left px-4 py-3 text-sm tracking-wider uppercase text-wood-dark"
                 >
-                  Abmelden
+                  {content.navigation.logoutLabel}
                 </button>
               </>
             ) : (
@@ -177,7 +182,7 @@ export default function Header() {
                 onClick={() => setMobileOpen(false)}
                 className="block px-4 py-3 text-sm tracking-wider uppercase text-wood-dark"
               >
-                Anmelden
+                {content.navigation.loginLabel}
               </Link>
             )}
           </nav>

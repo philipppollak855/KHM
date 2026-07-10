@@ -12,6 +12,7 @@ import {
   Truck,
   Settings,
   UserCog,
+  FilePenLine,
   type LucideIcon,
 } from "lucide-react";
 import type { PermissionModule } from "@/lib/types";
@@ -71,6 +72,7 @@ export const adminNavHubs: AdminNavEntry[] = [
       { href: "/admin/kategorien", icon: FolderTree, label: "Kategorien" },
       { href: "/admin/lager", icon: Boxes, label: "Lager" },
       { href: "/admin/versand", icon: Truck, label: "Versand" },
+      { href: "/admin/inhalte", icon: FilePenLine, label: "Website-Inhalte" },
       { href: "/admin/einstellungen", icon: Settings, label: "Firma & Shop" },
       { href: "/admin/team", icon: UserCog, label: "Team & Rechte" },
     ],

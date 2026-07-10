@@ -11,6 +11,7 @@ import Button from "@/components/ui/Button";
 import PageHeader from "@/components/layout/PageHeader";
 import CompanyLogo from "@/components/branding/CompanyLogo";
 import { useCompanyBranding } from "@/context/CompanyBrandingContext";
+import { useSiteContent } from "@/context/SiteContentContext";
 
 function LoginForm() {
   const router = useRouter();
@@ -18,6 +19,8 @@ function LoginForm() {
   const explicitRedirect = searchParams.get("redirect");
   const { login, user, loading: authLoading } = useAuth();
   const { company } = useCompanyBranding();
+  const { content } = useSiteContent();
+  const { auth } = content;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -62,22 +65,36 @@ function LoginForm() {
       </div>
       <PageHeader
         label="Kundenbereich"
-        title="Anmelden"
-        description={`Willkommen zurück bei ${company.name}`}
+        title={auth.login.title}
+        description={auth.login.subtitle.replace("{company}", company.name)}
       />
 
       <form onSubmit={handleSubmit} className="bg-linen border border-wood/10 p-8 space-y-4">
-        <Input label="E-Mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <Input label="Passwort" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <Input
+          label={auth.login.emailLabel}
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          label={auth.login.passwordLabel}
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Anmelden..." : "Anmelden"}
+          {loading ? `${auth.login.submitLabel}...` : auth.login.submitLabel}
         </Button>
       </form>
 
       <p className="text-center mt-6 text-sm text-stone">
-        Noch kein Konto?{" "}
-        <Link href="/register" className="text-forest hover:underline">Jetzt registrieren</Link>
+        {auth.login.registerPrompt}{" "}
+        <Link href="/register" className="text-forest hover:underline">
+          {auth.login.registerLink}
+        </Link>
       </p>
     </div>
   );

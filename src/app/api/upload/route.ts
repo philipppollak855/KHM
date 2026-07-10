@@ -4,7 +4,7 @@ import { requireModuleWrite } from "@/lib/admin-auth";
 
 const MAX_SIZE_MB = 5;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const ALLOWED_FOLDERS = ["products", "categories", "branding"];
+const ALLOWED_FOLDERS = ["products", "categories", "branding", "marketing"];
 
 export async function POST(req: NextRequest) {
   const auth = await requireModuleWrite(req, "settings");

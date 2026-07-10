@@ -1,14 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { LANDING_IMAGES } from "@/lib/marketing-images";
+import StyledText from "@/components/content/StyledText";
+import type { HomePageContent } from "@/lib/site-content";
 
-export default function QuoteSection() {
+interface QuoteProps {
+  content: HomePageContent["quote"];
+}
+
+export default function QuoteSection({ content }: QuoteProps) {
   return (
     <section className="relative py-32 md:py-40 overflow-hidden">
       <Image
-        src={LANDING_IMAGES.quoteNature}
-        alt="Naturdetail"
+        src={content.imageUrl}
+        alt={content.imageAlt}
         fill
         className="object-cover"
         sizes="100vw"
@@ -21,36 +26,34 @@ export default function QuoteSection() {
           <span className="text-wheat/60 text-lg">✦</span>
         </div>
         <blockquote className="font-display text-3xl md:text-4xl lg:text-5xl font-light text-linen leading-snug italic mb-10">
-          „Was von Hand gemacht wird, trägt die Wärme der Hände, die es formten —
-          lange nachdem es unser Haus verlassen hat.“
+          {content.text}
         </blockquote>
         <p className="text-wheat/70 text-sm tracking-[0.2em] uppercase">
-          Kevin · Gründer &amp; Handwerker
+          {content.attribution}
         </p>
       </div>
     </section>
   );
 }
 
-export function CtaSection() {
+interface CtaProps {
+  content: HomePageContent["cta"];
+}
+
+export function CtaSection({ content }: CtaProps) {
   return (
     <section className="py-28 md:py-36 bg-forest text-linen">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-        <p className="section-label text-sage mb-6">Ein Stück Heimat</p>
+        <p className="section-label text-sage mb-6">{content.label}</p>
         <h2 className="font-display text-4xl md:text-5xl font-light mb-6 leading-tight">
-          Bringen Sie das Schneebergland
-          <br />
-          <span className="italic">nach Hause</span>
+          <StyledText text={content.title} italicClassName="italic" />
         </h2>
-        <p className="text-linen/60 leading-relaxed mb-10 max-w-lg mx-auto">
-          Entdecken Sie unsere handgefertigte Kollektion — jedes Stück ein
-          Unikat, gefertigt mit Sorgfalt und Liebe zum Detail.
-        </p>
+        <p className="text-linen/60 leading-relaxed mb-10 max-w-lg mx-auto">{content.body}</p>
         <Link
-          href="/shop"
+          href={content.button.href}
           className="inline-flex items-center gap-3 bg-linen text-wood-dark px-10 py-4 text-sm tracking-[0.15em] uppercase font-medium hover:bg-linen-dark transition-colors duration-300"
         >
-          Zur Kollektion
+          {content.button.label}
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>

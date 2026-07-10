@@ -113,6 +113,7 @@ export function getModuleForPath(pathname: string): PermissionModule | null {
   if (pathname.startsWith("/admin/lager")) return "inventory";
   if (pathname.startsWith("/admin/versand")) return "shipping";
   if (pathname.startsWith("/admin/einstellungen")) return "settings";
+  if (pathname.startsWith("/admin/inhalte")) return "settings";
   if (pathname.startsWith("/admin/team")) return "team";
   return null;
 }

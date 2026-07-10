@@ -13,10 +13,9 @@ function validateImageFile(file: File) {
   }
 }
 
-async function uploadViaApi(
-  file: File,
-  folder: "products" | "categories" | "branding"
-): Promise<string> {
+type UploadFolder = "products" | "categories" | "branding" | "marketing";
+
+async function uploadViaApi(file: File, folder: UploadFolder): Promise<string> {
   const user = auth.currentUser;
   if (!user) {
     throw new Error("Bitte als Admin anmelden, um Bilder hochzuladen.");
@@ -41,10 +40,7 @@ async function uploadViaApi(
   return payload.url as string;
 }
 
-async function uploadViaClient(
-  file: File,
-  folder: "products" | "categories" | "branding"
-): Promise<string> {
+async function uploadViaClient(file: File, folder: UploadFolder): Promise<string> {
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const storageRef = ref(storage, path);
@@ -59,7 +55,7 @@ async function uploadViaClient(
 
 export async function uploadProductImage(
   file: File,
-  folder: "products" | "categories" | "branding" = "products"
+  folder: UploadFolder = "products"
 ): Promise<string> {
   validateImageFile(file);
 
@@ -82,6 +78,10 @@ export async function uploadCategoryImage(file: File): Promise<string> {
 
 export async function uploadBrandingImage(file: File): Promise<string> {
   return uploadProductImage(file, "branding");
+}
+
+export async function uploadMarketingImage(file: File): Promise<string> {
+  return uploadProductImage(file, "marketing");
 }
 
 export async function deleteStorageFile(url: string): Promise<void> {

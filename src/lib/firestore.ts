@@ -32,6 +32,7 @@ import type {
 } from "./types";
 import { DEFAULT_COMPANY } from "./company";
 import { DEFAULT_SHIPPING_ZONES } from "./shipping";
+import { DEFAULT_SITE_CONTENT, mergeSiteContent, type SiteContent } from "./site-content";
 import { validateCartStock, restockOrder } from "./inventory";
 import { auth } from "./firebase";
 import type { CartItem, PaymentMethod } from "./types";
@@ -158,6 +159,16 @@ export async function getCompanySettings(): Promise<CompanySettings> {
 
 export async function saveCompanySettings(data: CompanySettings) {
   return setDoc(doc(db, "settings", "company"), data, { merge: true });
+}
+
+export async function getSiteContent(): Promise<SiteContent> {
+  const snap = await getDoc(doc(db, "settings", "siteContent"));
+  if (!snap.exists()) return DEFAULT_SITE_CONTENT;
+  return mergeSiteContent(snap.data() as Partial<SiteContent>);
+}
+
+export async function saveSiteContent(data: SiteContent) {
+  return setDoc(doc(db, "settings", "siteContent"), data, { merge: true });
 }
 
 export async function getShippingZones(): Promise<ShippingZone[]> {

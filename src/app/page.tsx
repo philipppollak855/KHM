@@ -1,4 +1,5 @@
 import { getActiveProducts } from "@/lib/firestore";
+import { getSiteContentServer } from "@/lib/site-content-server";
 import HeroSection from "@/components/landing/HeroSection";
 import PhilosophySection from "@/components/landing/PhilosophySection";
 import ValuesSection from "@/components/landing/ValuesSection";
@@ -7,6 +8,7 @@ import FeaturedSection from "@/components/landing/FeaturedSection";
 import QuoteSection, { CtaSection } from "@/components/landing/QuoteSection";
 
 export default async function HomePage() {
+  const siteContent = await getSiteContentServer();
   let featuredProducts: Awaited<ReturnType<typeof getActiveProducts>> = [];
   try {
     const products = await getActiveProducts();
@@ -18,15 +20,17 @@ export default async function HomePage() {
     // Firestore may not be ready yet
   }
 
+  const { home } = siteContent;
+
   return (
     <>
-      <HeroSection />
-      <PhilosophySection />
-      <ValuesSection />
-      <CraftSection />
-      <FeaturedSection products={featuredProducts} />
-      <QuoteSection />
-      <CtaSection />
+      <HeroSection content={home.hero} />
+      <PhilosophySection content={home.philosophy} />
+      <ValuesSection content={home.values} />
+      <CraftSection content={home.craft} />
+      <FeaturedSection products={featuredProducts} content={home.featured} />
+      <QuoteSection content={home.quote} />
+      <CtaSection content={home.cta} />
     </>
   );
 }

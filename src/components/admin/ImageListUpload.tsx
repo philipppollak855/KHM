@@ -9,7 +9,7 @@ interface ImageListUploadProps {
   hint?: string;
   images: string[];
   onChange: (images: string[]) => void;
-  folder?: "products";
+  folder?: "products" | "marketing";
   libraryQuery?: string;
 }
 

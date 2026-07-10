@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { CompanyBrandingProvider } from "@/context/CompanyBrandingContext";
+import { SiteContentProvider } from "@/context/SiteContentContext";
 import LayoutShell from "@/components/layout/LayoutShell";
 import { getCompanySettingsServer } from "@/lib/company-server";
 import { getPwaShortName } from "@/lib/branding-image";
@@ -79,9 +80,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col wood-texture">
         <AuthProvider>
           <CompanyBrandingProvider>
-            <CartProvider>
-              <LayoutShell>{children}</LayoutShell>
-            </CartProvider>
+            <SiteContentProvider>
+              <CartProvider>
+                <LayoutShell>{children}</LayoutShell>
+              </CartProvider>
+            </SiteContentProvider>
           </CompanyBrandingProvider>
         </AuthProvider>
       </body>

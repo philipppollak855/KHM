@@ -8,6 +8,7 @@ import PwaRootGuard from "@/components/pwa/PwaRootGuard";
 import { useAuth } from "@/context/AuthContext";
 import { useIsStandalonePwa } from "@/hooks/useIsStandalonePwa";
 import { usePwaBottomNavInset } from "@/hooks/usePwaBottomNavInset";
+import CookieBanner from "@/components/legal/CookieBanner";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -38,6 +39,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
         <Footer className={showPwaAdminNav ? "pb-pwa-nav" : undefined} />
       </div>
       {showPwaAdminNav && <PwaBottomNav />}
+      <CookieBanner />
     </>
   );
 }

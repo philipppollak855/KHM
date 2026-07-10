@@ -1,9 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { LANDING_IMAGES } from "@/lib/marketing-images";
+import StyledText from "@/components/content/StyledText";
+import type { HomePageContent } from "@/lib/site-content";
 
-export default function PhilosophySection() {
+interface Props {
+  content: HomePageContent["philosophy"];
+}
+
+export default function PhilosophySection({ content }: Props) {
   return (
     <section className="py-28 md:py-36 bg-linen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -11,8 +16,8 @@ export default function PhilosophySection() {
           <div className="relative">
             <div className="relative aspect-[4/5] overflow-hidden">
               <Image
-                src={LANDING_IMAGES.philosophyWorkshop}
-                alt="Handwerkskunst in der Werkstatt"
+                src={content.imageUrl}
+                alt={content.imageAlt}
                 fill
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
@@ -24,37 +29,29 @@ export default function PhilosophySection() {
           </div>
 
           <div>
-            <p className="section-label text-bark mb-5">Unsere Philosophie</p>
+            <p className="section-label text-bark mb-5">{content.label}</p>
             <h2 className="font-display text-4xl md:text-5xl font-light text-wood-dark leading-tight mb-8">
-              Langsam gemacht.
-              <br />
-              <span className="italic">Mit Bedacht.</span>
+              <StyledText text={content.title} />
             </h2>
             <div className="space-y-5 text-stone leading-relaxed">
-              <p>
-                Kevin&apos;s Handmade Manufactur steht für eine Rückbesinnung auf
-                echtes Handwerk. Inmitten des Schneeberglandes fertigen wir
-                Produkte, die Zeit, Geduld und Respekt vor dem Material
-                verdienen.
-              </p>
-              <p>
-                Keine Massenproduktion, keine Eile — nur die ruhige Arbeit der
-                Hände, die Holz, Wolle und Naturmaterialien in etwas
-                Bleibendes verwandeln.
-              </p>
+              {content.paragraphs.map((paragraph, i) => (
+                <p key={i}>{paragraph}</p>
+              ))}
             </div>
             <div className="mt-10 pt-8 border-t border-wood/10 flex items-center justify-between">
               <div>
-                <p className="font-display text-3xl text-forest font-light">2018</p>
+                <p className="font-display text-3xl text-forest font-light">
+                  {content.statValue}
+                </p>
                 <p className="text-xs tracking-widest uppercase text-stone mt-1">
-                  Gegründet im Schneebergland
+                  {content.statLabel}
                 </p>
               </div>
               <Link
-                href="/ueber-uns"
+                href={content.cta.href}
                 className="inline-flex items-center gap-2 text-sm tracking-wider uppercase text-forest hover:text-forest-light transition-colors"
               >
-                Mehr erfahren
+                {content.cta.label}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
